@@ -1,0 +1,59 @@
+import React from 'react';
+import ConceptMapSelector from './concept-maps/ConceptMapSelector';
+import { ConceptMapLayout, ConceptMapTheme } from './concept-maps/types';
+import Card from './Card';
+
+interface ConceptNode {
+  id: number;
+  label: string;
+  type?: string;
+  level?: number;
+}
+
+interface ConceptEdge {
+  id: number;
+  from: number;
+  to: number;
+  label?: string;
+}
+
+interface ConceptMapProps {
+  concepts: {
+    nodes: ConceptNode[];
+    edges: ConceptEdge[];
+  };
+  layout?: ConceptMapLayout;
+  theme?: ConceptMapTheme;
+  onNodeClick?: (node: ConceptNode) => void;
+}
+
+const ConceptMap: React.FC<ConceptMapProps> = ({ 
+  concepts, 
+  layout = 'hierarchical',
+  theme = 'default',
+  onNodeClick
+}) => {
+  // Convert the concepts data to match the expected format
+  const data = {
+    nodes: concepts.nodes.map(node => ({
+      ...node,
+      type: node.type || (node.level === 1 ? 'concept' : 
+             node.level === 2 ? 'topic' : 
+             node.level === 3 ? 'subtopic' : 'example')
+    })),
+    edges: concepts.edges
+  };
+
+  return (
+    <Card className="p-4">
+      <ConceptMapSelector
+        data={data}
+        defaultLayout={layout}
+        defaultTheme={theme}
+        onNodeClick={onNodeClick}
+      />
+    </Card>
+  );
+};
+
+export default ConceptMap;

@@ -1,0 +1,123 @@
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Fira+Code:wght@300;400;500;600;700&family=Open+Sans:wght@300;400;500;600;700;800&family=Roboto:wght@300;400;500;700;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Light Mode */
+    --color-paper: #FFFFFF;
+    --color-leather: #8a57ea;
+    --color-text: #333333;
+    --color-secondary: #F0F0F0;
+    
+    /* Dark Mode */
+    --color-dark-leather: #4A3728;
+    --color-light-beige: #E6D7C3;
+    --color-medium-brown: #6B4E3D;
+    
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-paper text-text font-sans;
+    margin: 0;
+    min-height: 100vh;
+  }
+
+  /* Dark mode styles */
+  .dark body {
+    @apply bg-dark-leather text-light-beige;
+  }
+
+  /* Neumorphic styles for light mode */
+  .neumorphic-light {
+    @apply bg-paper shadow-neu-light;
+    border-radius: 16px;
+  }
+
+  .neumorphic-light-pressed {
+    @apply bg-paper shadow-neu-pressed-light;
+    border-radius: 16px;
+  }
+
+  /* Neumorphic styles for dark mode */
+  .dark .neumorphic-dark {
+    @apply bg-dark-leather shadow-neu-dark;
+    border-radius: 16px;
+  }
+
+  .dark .neumorphic-dark-pressed {
+    @apply bg-dark-leather shadow-neu-pressed-dark;
+    border-radius: 16px;
+  }
+
+  #root {
+    display: block !important;
+    min-height: 100vh;
+    background-color: white;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200;
+  }
+
+  .btn-primary {
+    @apply bg-leather text-white hover:bg-opacity-90;
+  }
+
+  .btn-outline {
+    @apply border border-leather text-leather hover:bg-leather hover:bg-opacity-10;
+  }
+
+  .card {
+    @apply bg-paper rounded-lg overflow-hidden;
+  }
+
+  .dark .card {
+    @apply bg-dark-leather;
+  }
+
+  .input {
+    @apply px-4 py-2 rounded-lg border border-secondary bg-paper;
+  }
+
+  .dark .input {
+    @apply border-medium-brown bg-dark-leather text-light-beige;
+  }
+}
+
+/* Prose styles for rich text content */
+.prose {
+  @apply text-text max-w-none;
+}
+
+.prose h1, .prose h2, .prose h3, .prose h4 {
+  @apply font-handwriting text-leather;
+}
+
+.prose p {
+  @apply mb-4;
+}
+
+.prose ul, .prose ol {
+  @apply mb-4 pl-6;
+}
+
+.prose li {
+  @apply mb-2;
+}
+
+.dark .prose {
+  @apply text-light-beige;
+}
+
+.dark .prose h1, .dark .prose h2, .dark .prose h3, .dark .prose h4 {
+  @apply text-light-beige;
+}
