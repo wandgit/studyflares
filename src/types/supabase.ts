@@ -6,6 +6,15 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
+export interface Profile {
+  id: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  school: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -108,47 +117,6 @@ export interface Database {
           metadata?: Json
         }
       }
-      community_posts: {
-        Row: {
-          id: string
-          created_at: string
-          updated_at: string
-          user_id: string
-          title: string
-          content: string
-          study_material_id: string | null
-          likes: number
-          comments_count: number
-          is_pinned: boolean
-          tags: string[]
-        }
-        Insert: {
-          id?: string
-          created_at?: string
-          updated_at?: string
-          user_id: string
-          title: string
-          content: string
-          study_material_id?: string | null
-          likes?: number
-          comments_count?: number
-          is_pinned?: boolean
-          tags?: string[]
-        }
-        Update: {
-          id?: string
-          created_at?: string
-          updated_at?: string
-          user_id?: string
-          title?: string
-          content?: string
-          study_material_id?: string | null
-          likes?: number
-          comments_count?: number
-          is_pinned?: boolean
-          tags?: string[]
-        }
-      }
       comments: {
         Row: {
           id: string
@@ -185,7 +153,7 @@ export interface Database {
         Row: {
           id: string
           updated_at: string
-          name: string | null
+          full_name: string
           school: string | null
           avatar_url: string | null
           email: string
@@ -193,7 +161,7 @@ export interface Database {
         Insert: {
           id: string
           updated_at?: string
-          name?: string | null
+          full_name: string
           school?: string | null
           avatar_url?: string | null
           email: string
@@ -201,7 +169,7 @@ export interface Database {
         Update: {
           id?: string
           updated_at?: string
-          name?: string | null
+          full_name?: string
           school?: string | null
           avatar_url?: string | null
           email?: string

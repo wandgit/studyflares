@@ -42,7 +42,7 @@ class ActivityService {
   async getStudyMaterialActivity(studyMaterialId: string) {
     const { data: activities, error } = await supabase
       .from('activity_history')
-      .select('*, profiles(name)')
+      .select('*, profiles(full_name)')
       .eq('study_material_id', studyMaterialId)
       .order('created_at', { ascending: false });
 

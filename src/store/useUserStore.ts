@@ -25,7 +25,7 @@ interface UserState {
   loading: boolean;
   error: string | null;
   passwordData: PasswordData;
-  initializeUser: (supabaseUser: SupabaseUser) => Promise<void>;
+  initializeUser: (maybeUser?: SupabaseUser) => Promise<void>;
   updateProfile: (data: Partial<User>) => Promise<void>;
   clearError: () => void;
   setUser: (user: User | null) => void;
@@ -64,31 +64,41 @@ const useUserStore = create<UserState>((set, get) => ({
 
   setUser: (user: User | null) => set({ currentUser: user }),
 
-  initializeUser: async (supabaseUser: SupabaseUser) => { 
-    console.log('[useUserStore.initializeUser] Initializing with Supabase user:', supabaseUser);
+  initializeUser: async (maybeUser?: SupabaseUser) => { 
+    console.log('[useUserStore.initializeUser] Starting initialization...');
     set({ loading: true, error: null });
+    
     try {
-      if (!supabaseUser) {
-        console.warn('[useUserStore.initializeUser] No Supabase user provided.');
-        set({ loading: false, currentUser: null });
-        return;
+      let user = maybeUser;
+      
+      // If no user was passed in, try to get the current user from Supabase
+      if (!user) {
+        console.log('[useUserStore.initializeUser] No user provided, fetching current user...');
+        const { data: { user: sessionUser }, error: userErr } = await supabase.auth.getUser();
+        if (userErr || !sessionUser) {
+          console.warn('[useUserStore.initializeUser] No Supabase user available');
+          set({ loading: false, currentUser: null });
+          return;
+        }
+        user = sessionUser;
       }
 
+      console.log('[useUserStore.initializeUser] Using user:', user.id);
       const auth = new AuthService();
 
       console.log('[useUserStore.initializeUser] Calling authService.ensureProfile...');
-      const profile = await auth.ensureProfile(supabaseUser);
+      const profile = await auth.ensureProfile(user);
       if (!profile) {
         console.error('[useUserStore.initializeUser] ensureProfile failed to return a profile.');
         throw new Error('Failed to initialize user profile after ensureProfile.');
       }
       console.log('[useUserStore.initializeUser] Profile ensured/found:', profile);
 
-      const user = auth.mapUserData(supabaseUser, profile);
-      console.log('[useUserStore.initializeUser] User mapped:', user);
+      const mappedUser = auth.mapUserData(user, profile);
+      console.log('[useUserStore.initializeUser] User mapped:', mappedUser);
 
-      set({ currentUser: user, loading: false, error: null });
-      console.log('[useUserStore.initializeUser] User state set.');
+      set({ currentUser: mappedUser, loading: false, error: null });
+      console.log('[useUserStore.initializeUser] User state set successfully.');
 
     } catch (error: any) {
       console.error('[useUserStore.initializeUser] Error:', error);
@@ -125,6 +135,7 @@ const useUserStore = create<UserState>((set, get) => ({
       throw error;
     }
   },
+
   clearError: () => set({ error: null }),
 
   updatePasswordField: (field: keyof PasswordData, value: string) => {

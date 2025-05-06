@@ -1,56 +1,36 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import LoginForm from '../components/auth/LoginForm';
-import SignUpForm from '../components/auth/SignUpForm';
-import useAuthStore from '../store/useAuthStore';
-import LoadingScreen from '../components/ui/LoadingScreen';
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import AuthForm from '../auth/AuthForm';
+import { useAuth } from '../auth/AuthProvider';
 
 const AuthPage = () => {
-  const [searchParams] = useSearchParams();
-  const modeParam = searchParams.get('mode');
+  const { session, isLoading } = useAuth();
   const navigate = useNavigate();
-  const { isAuthenticated, isAuthLoading, initializeAuth } = useAuthStore();
-
-  const [isSignUp, setIsSignUp] = useState(modeParam === 'signup');
 
   useEffect(() => {
-    const checkAuth = async () => {
-      await initializeAuth();
-      if (isAuthenticated) {
-        navigate('/', { replace: true });
-      }
-    };
-    checkAuth();
-  }, [initializeAuth, isAuthenticated, navigate]);
-
-  useEffect(() => {
-    // Set default mode to signup for new users
-    if (!modeParam) {
-      navigate('/auth?mode=signup', { replace: true });
-      setIsSignUp(true);
+    if (session && !isLoading) {
+      navigate('/', { replace: true });
     }
-  }, [modeParam, navigate]);
+  }, [session, isLoading, navigate]);
 
-  const toggleForm = () => {
-    setIsSignUp(!isSignUp);
-    navigate(`/auth?mode=${!isSignUp ? 'signup' : 'login'}`);
-  };
-
-  if (isAuthLoading) {
-    return <LoadingScreen />;
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-paper flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-lg shadow-md p-8">
-        <h1 className="text-2xl font-bold text-center mb-6">
-          {isSignUp ? 'Create Account' : 'Welcome Back'}
-        </h1>
-        {isSignUp ? (
-          <SignUpForm onToggleForm={toggleForm} />
-        ) : (
-          <LoginForm onToggleForm={toggleForm} />
-        )}
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Welcome Back</h1>
+          <p className="mt-2 text-gray-600">Sign in to your account to continue</p>
+        </div>
+        <div className="bg-white p-8 shadow-sm rounded-lg">
+          <AuthForm />
+        </div>
       </div>
     </div>
   );

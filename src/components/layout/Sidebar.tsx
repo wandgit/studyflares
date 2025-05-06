@@ -1,4 +1,4 @@
-import { Home, Upload, BookOpen, Users, User, Library } from 'lucide-react';
+import { Home, Upload, BookOpen, User, Library, GraduationCap } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
@@ -13,8 +13,8 @@ const Sidebar = ({ isOpen, onClose, isMobile = false }: SidebarProps) => {
     { path: '/', label: 'Home', icon: Home },
     { path: '/upload', label: 'Upload', icon: Upload },
     { path: '/study', label: 'Study', icon: BookOpen },
-    { path: '/library', label: 'Study Library', icon: Library },
-    { path: '/community', label: 'Community', icon: Users },
+    { path: '/library', label: 'Library', icon: Library },
+    { path: '/exam', label: 'Exam', icon: GraduationCap },
     { path: '/profile', label: 'Profile', icon: User },
   ];
 

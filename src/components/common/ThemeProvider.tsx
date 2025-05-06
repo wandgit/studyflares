@@ -1,4 +1,4 @@
-import { ReactNode, useEffect } from 'react';
+import { ReactNode, useEffect, useCallback } from 'react';
 import { useThemeStore } from '../../store/themeStore';
 
 interface ThemeProviderProps {
@@ -6,18 +6,20 @@ interface ThemeProviderProps {
 }
 
 export const ThemeProvider = ({ children }: ThemeProviderProps) => {
-  console.log('ThemeProvider rendering');
   const { darkMode } = useThemeStore();
-  
-  // Apply dark mode class to the html element
-  useEffect(() => {
-    console.log('ThemeProvider useEffect running, darkMode:', darkMode);
-    if (darkMode) {
+
+  const applyTheme = useCallback((isDark: boolean) => {
+    if (isDark) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
-  }, [darkMode]);
-  
+  }, []);
+
+  useEffect(() => {
+    // Apply theme immediately
+    applyTheme(darkMode);
+  }, [darkMode, applyTheme]);
+
   return <>{children}</>;
 };

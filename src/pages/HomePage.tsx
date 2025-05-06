@@ -1,14 +1,14 @@
 import { useNavigate } from 'react-router-dom';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import { BookOpen, Upload, ArrowRight, Users, User } from 'lucide-react';
+import { BookOpen, Upload, User } from 'lucide-react';
 import RecentActivity from '../components/home/RecentActivity';
-import useAuthStore from '../store/useAuthStore';
+import { useAuth } from '../auth/AuthProvider';
 
 const HomePage = () => {
   console.log('HomePage rendering');
   const navigate = useNavigate();
-  const { currentUser } = useAuthStore();
+  const { user, profile } = useAuth();
   
   const features = [
     {
@@ -49,7 +49,7 @@ const HomePage = () => {
           <div className="flex flex-col md:flex-row items-center">
             <div className="md:w-1/2 mb-6 md:mb-0 md:pr-8">
               <h1 className="font-handwriting text-3xl md:text-4xl lg:text-5xl mb-4">
-                {currentUser ? `Welcome back, ${currentUser.name}!` : 'Your AI Study Companion'}
+                {profile?.full_name || user?.email || 'Student'}!
               </h1>
               <p className="text-base md:text-lg mb-6 text-text opacity-80">
                 Transform your study materials into interactive learning experiences with the power of AI. 
@@ -87,7 +87,7 @@ const HomePage = () => {
       
       {/* Recent Activity Section */}
       <section className="mb-8 md:mb-12">
-        <RecentActivity maxItems={3} showViewAll={true} />
+        <RecentActivity userId={user?.id} maxItems={3} showViewAll={true} />
       </section>
       
       {/* Features */}

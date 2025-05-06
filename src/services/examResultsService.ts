@@ -30,7 +30,7 @@ class ExamResultsService {
   async getExamResult(id: string) {
     const { data: result, error } = await supabase
       .from('exam_results')
-      .select('*, study_materials(title, subject), profiles(name)')
+      .select('*, study_materials(title, subject), profiles(full_name)')
       .eq('id', id)
       .single();
 
@@ -41,7 +41,7 @@ class ExamResultsService {
   async getStudyMaterialResults(studyMaterialId: string) {
     const { data: results, error } = await supabase
       .from('exam_results')
-      .select('*, profiles(name)')
+      .select('*, profiles(full_name)')
       .eq('study_material_id', studyMaterialId)
       .order('score', { ascending: false });
 
