@@ -5,7 +5,9 @@ import {
   generateQuiz, 
   generateConceptMap,
   chatWithAI,
-  type ChatMessage
+  type ChatMessage,
+  type QuizQuestion,
+  QuestionDifficulty
 } from '../services/geminiService';
 import { toast } from 'react-hot-toast';
 
@@ -19,14 +21,7 @@ interface ContentState {
   // Generated study materials
   studyGuide: string | null;
   flashcards: Array<{ question: string; answer: string }> | null;
-  quiz: Array<{ 
-    question: string; 
-    options: string[]; 
-    correctAnswer: string;
-    explanation: string;
-    difficulty: 'easy' | 'medium' | 'hard';
-    points: number;
-  }> | null;
+  quiz: QuizQuestion[] | null;
   conceptMap: {
     nodes: Array<{ id: number; label: string; level: number }>;
     edges: Array<{ id: number; from: number; to: number; label?: string }>;

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useRef } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Upload, File, X } from 'lucide-react';
 import Button from './Button';
@@ -9,6 +9,8 @@ interface FileUploadProps {
   maxFiles?: number;
   acceptedFileTypes?: string[];
   maxSize?: number;
+  isAuthenticated?: boolean;
+  onAuthRequired?: () => void;
 }
 
 const FileUpload = ({
@@ -16,11 +18,20 @@ const FileUpload = ({
   maxFiles = 5,
   acceptedFileTypes = ['.pdf', '.docx', '.txt', '.jpg', '.png'],
   maxSize = 10 * 1024 * 1024, // 10MB default
+  isAuthenticated = false,
+  onAuthRequired
 }: FileUploadProps) => {
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
   
   const onDrop = useCallback((acceptedFiles: File[], rejectedFiles: any[]) => {
+    console.log('[FileUpload] onDrop called:', { isAuthenticated, acceptedFiles, rejectedFiles });
+    // Check auth first
+    if (!isAuthenticated) {
+      console.log('[FileUpload] Not authenticated, calling onAuthRequired');
+      onAuthRequired?.();
+      return;
+    }
     setError(null);
     
     // Handle rejected files
@@ -53,7 +64,15 @@ const FileUpload = ({
     onFileUpload(newFiles);
   };
   
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    disabled: !isAuthenticated,
+    onDropRejected: () => {
+      if (!isAuthenticated) {
+        onAuthRequired?.();
+      }
+    },
     onDrop,
     accept: acceptedFileTypes.reduce((acc, type) => {
       // Create an object with MIME types as required by react-dropzone v14+
@@ -72,22 +91,36 @@ const FileUpload = ({
     <div className="w-full">
       <div 
         {...getRootProps()} 
+        onClick={(e) => {
+          console.log('[FileUpload] Upload area clicked');
+          if (!isAuthenticated) {
+            console.log('[FileUpload] Click intercepted, not authenticated');
+            e.preventDefault();
+            onAuthRequired?.();
+            return;
+          }
+          // Manually trigger file input click
+          if (fileInputRef.current) {
+            fileInputRef.current.click();
+          }
+          console.log('[FileUpload] Click allowed, user is authenticated');
+        }}
         className={`
-          neu-card p-8 border-2 border-dashed border-secondary 
+          neu-card p-8 border-2 border-dashed 
           ${isDragActive ? 'border-leather' : 'border-secondary'}
-          cursor-pointer transition-all duration-300 flex flex-col items-center justify-center
-          hover:border-leather
+          ${!isAuthenticated ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-leather'}
+          transition-all duration-300 flex flex-col items-center justify-center
         `}
       >
-        <input {...getInputProps()} />
+        <input {...getInputProps()} ref={fileInputRef} />
         
         <div className="text-center">
           <Upload 
             size={48} 
-            className={`mx-auto mb-4 ${isDragActive ? 'text-leather' : 'text-text opacity-60'}`} 
+            className={`mx-auto mb-4 ${isDragActive ? 'text-accent' : 'text-text opacity-60'}`} 
           />
           
-          <h3 className="font-handwriting text-xl mb-2">
+          <h3 className="font-sans text-xl mb-2">
             {isDragActive ? 'Drop your files here' : 'Upload your study materials'}
           </h3>
           
@@ -99,12 +132,23 @@ const FileUpload = ({
             variant="primary" 
             className="mx-auto"
             leftIcon={<File size={16} />}
+            disabled={!isAuthenticated}
+            onClick={(e) => {
+              e.stopPropagation(); // Prevent dropzone handler from intercepting
+              if (fileInputRef.current) {
+                fileInputRef.current.click();
+              }
+            }}
           >
             Select Files
           </Button>
           
           <p className="mt-4 text-sm text-text opacity-50">
-            Accepted file types: {acceptedFileTypes.join(', ')} (Max: {maxFiles} files, {maxSize / (1024 * 1024)}MB each)
+            {!isAuthenticated ? (
+              'Please sign in to upload files'
+            ) : (
+              `Accepted file types: ${acceptedFileTypes.join(', ')} (Max: ${maxFiles} files, ${maxSize / (1024 * 1024)}MB each)`
+            )}
           </p>
         </div>
       </div>
@@ -117,7 +161,7 @@ const FileUpload = ({
       
       {uploadedFiles.length > 0 && (
         <div className="mt-6">
-          <h4 className="font-handwriting text-lg mb-3">Uploaded Files</h4>
+          <h4 className="font-sans text-lg mb-3">Uploaded Files</h4>
           <div className="space-y-3">
             {uploadedFiles.map((file, index) => (
               <Card key={index} className="flex items-center justify-between p-3">

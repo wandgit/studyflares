@@ -39,6 +39,11 @@ interface ProgressState {
   studySessions: StudySession[];
   userProgress: UserProgress;
   activeSession: StudySession | null;
+  userLevel: {
+    currentLevel: number;
+    currentXP: number;
+    xpToNextLevel: number;
+  };
   
   updateTopicProgress: (topicId: string, progress: Partial<TopicProgress>) => void;
   calculateMasteryLevel: (topicId: string) => number;
@@ -65,6 +70,11 @@ const useProgressStore = create<ProgressState>()(persist<ProgressState>(
         totalStudyTime: 0,
         totalExamsTaken: 0,
         averageExamScore: 0,
+      },
+      userLevel: {
+        currentLevel: 1,
+        currentXP: 0,
+        xpToNextLevel: calculateXPForLevel(1),
       },
       activeSession: null,
 
@@ -99,7 +109,16 @@ const useProgressStore = create<ProgressState>()(persist<ProgressState>(
           quizComponent + examComponent : 
           quizComponent * (100/40); // Scale quiz component to 100% if no exams
           
-        return Math.floor(totalScore);
+        // Cap at 100 and floor the value
+        const masteryScore = Math.floor(totalScore);
+        
+        // If score is already at Expert level (80+), cap at 100
+        if (masteryScore >= 80) {
+          // Consider mastery complete at 80+
+          return Math.min(masteryScore, 100);
+        }
+          
+        return masteryScore;
       },
 
       startStudySession: (topic, duration, focusMode) => {
@@ -164,6 +183,11 @@ const useProgressStore = create<ProgressState>()(persist<ProgressState>(
                 currentXP: currentXP - xpToNextLevel,
                 xpToNextLevel: calculateXPForLevel(newLevel),
               },
+              userLevel: {
+                currentLevel: newLevel,
+                currentXP: currentXP - xpToNextLevel,
+                xpToNextLevel: calculateXPForLevel(newLevel),
+              }
             };
           }
           
@@ -173,6 +197,10 @@ const useProgressStore = create<ProgressState>()(persist<ProgressState>(
               ...state.userProgress,
               currentXP,
             },
+            userLevel: {
+              ...state.userLevel,
+              currentXP,
+            }
           };
         });
       },

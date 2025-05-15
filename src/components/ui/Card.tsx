@@ -16,7 +16,7 @@ const Card = ({
   interactive = false, 
   elevation = 'medium'
 }: CardProps) => {
-  const baseClasses = 'card transition-all duration-300';
+  const baseClasses = `bg-paper dark:bg-paper-dark rounded-xl shadow-sm border border-secondary dark:border-secondary-dark transition-all duration-300`;
   
   const elevationClasses = {
     low: 'shadow-sm',

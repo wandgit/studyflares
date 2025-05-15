@@ -7,9 +7,15 @@ import { Check, AlertCircle, FileText } from 'lucide-react';
 import useContentStore from '../store/useContentStore';
 import { extractTextFromFile, getTextPreview } from '../utils/fileUtils';
 
+import { useAuth } from '../components/auth/AuthProvider';
+
 const UploadPage = () => {
+  console.log('[UploadPage] Rendering UploadPageContent');
+  const { state } = useAuth();
+  console.log('[UploadPage] Current auth state:', state.status);
   const navigate = useNavigate();
   const { setUploadedContent, uploadedContent, uploadedFileName } = useContentStore();
+
   
   const [files, setFiles] = useState<File[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -19,6 +25,8 @@ const UploadPage = () => {
 
   const handleFileUpload = async (uploadedFiles: File[]) => {
     if (uploadedFiles.length === 0) return;
+
+    // Auth is already checked by RequireAuth component
     
     setFiles(uploadedFiles);
     setIsComplete(false);
@@ -34,6 +42,14 @@ const UploadPage = () => {
       
       // Store the content in our global store
       setUploadedContent(text, file.name);
+
+      // Scroll to the generate button
+      setTimeout(() => {
+        document.getElementById('generate-button')?.scrollIntoView({ 
+          behavior: 'smooth',
+          block: 'center'
+        });
+      }, 100);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred while processing your file.');
     }
@@ -66,10 +82,10 @@ const UploadPage = () => {
 
   return (
     <div className="max-w-4xl mx-auto p-4">
-      <h1 className="font-handwriting text-4xl mb-6">Upload Study Materials</h1>
+      <h1 className="font-heading text-4xl mb-6">Upload Study Materials</h1>
       
       <div className="mb-8">
-        <p className="text-lg mb-4 text-text opacity-80">
+        <p className="text-lg text-text dark:text-white opacity-70 mb-8">
           Upload your PDFs, digital textbooks, lecture notes, or images. 
           Our AI will process them and create personalized study materials for you.
         </p>
@@ -77,8 +93,8 @@ const UploadPage = () => {
         <div className="flex flex-wrap gap-4 mb-8">
           <Card className="p-4 flex-1 min-w-[200px]">
             <div className="text-center">
-              <h3 className="font-handwriting text-xl mb-2">Study Guides</h3>
-              <p className="text-sm text-text opacity-70">
+              <h3 className="font-heading text-xl mb-2">Study Guides</h3>
+              <p className="text-text dark:text-white opacity-70 mb-8">
                 Concise summaries and structured breakdowns of key concepts
               </p>
             </div>
@@ -86,8 +102,8 @@ const UploadPage = () => {
           
           <Card className="p-4 flex-1 min-w-[200px]">
             <div className="text-center">
-              <h3 className="font-handwriting text-xl mb-2">Flashcards</h3>
-              <p className="text-sm text-text opacity-70">
+              <h3 className="font-heading text-xl mb-2">Flashcards</h3>
+              <p className="text-text dark:text-white opacity-70 mb-8">
                 Question-answer pairs for efficient memorization
               </p>
             </div>
@@ -95,22 +111,28 @@ const UploadPage = () => {
           
           <Card className="p-4 flex-1 min-w-[200px]">
             <div className="text-center">
-              <h3 className="font-handwriting text-xl mb-2">Quizzes</h3>
-              <p className="text-sm text-text opacity-70">
+              <h3 className="font-heading text-xl mb-2">Quizzes</h3>
+              <p className="text-text dark:text-white opacity-70 mb-8">
                 Interactive tests with explanations to assess your knowledge
               </p>
             </div>
           </Card>
         </div>
         
-        <FileUpload onFileUpload={handleFileUpload} />
+        <FileUpload 
+          onFileUpload={handleFileUpload}
+          isAuthenticated={state.status === 'complete'}
+        />
         
         {textPreview && (
           <Card className="mt-6 p-4">
-            <h3 className="font-handwriting text-xl mb-2 flex items-center">
+            <h3 className="font-heading text-xl mb-2 flex items-center">
               <FileText size={20} className="mr-2" />
               {uploadedFileName || 'Uploaded Content'}
             </h3>
+            <p className="text-text/70 text-sm mb-4">
+              We're extracting text from your document to create personalized study materials. This may take a moment...
+            </p>
             <div className="bg-secondary bg-opacity-20 p-4 rounded-lg max-h-40 overflow-y-auto">
               <p className="whitespace-pre-wrap text-sm">{textPreview}</p>
             </div>
@@ -131,7 +153,7 @@ const UploadPage = () => {
           </div>
         )}
         
-        <div className="mt-6 flex justify-end">
+        <div id="generate-button" className="mt-6 flex justify-end">
           <Button
             variant="primary"
             size="lg"
@@ -143,51 +165,6 @@ const UploadPage = () => {
           </Button>
         </div>
       </div>
-      
-      {/* Optional Processing Settings */}
-      <Card className="p-6 mt-8">
-        <h2 className="font-handwriting text-2xl mb-4">Processing Options</h2>
-        
-        <div className="space-y-4">
-          <div>
-            <label className="block mb-2 font-medium">Language Detection</label>
-            <select className="w-full p-3 rounded-lg border border-secondary bg-paper">
-              <option value="auto">Auto-detect language</option>
-              <option value="en">English</option>
-              <option value="es">Spanish</option>
-              <option value="fr">French</option>
-              <option value="de">German</option>
-            </select>
-          </div>
-          
-          <div>
-            <label className="block mb-2 font-medium">Content Complexity</label>
-            <select className="w-full p-3 rounded-lg border border-secondary bg-paper">
-              <option value="basic">Basic - Simple explanations</option>
-              <option value="intermediate" selected>Intermediate - Balanced detail</option>
-              <option value="advanced">Advanced - In-depth analysis</option>
-            </select>
-          </div>
-          
-          <div>
-            <label className="block mb-2 font-medium">Study Materials to Generate</label>
-            <div className="space-y-2">
-              <label className="flex items-center">
-                <input type="checkbox" className="mr-2" defaultChecked />
-                Study Guides
-              </label>
-              <label className="flex items-center">
-                <input type="checkbox" className="mr-2" defaultChecked />
-                Flashcards
-              </label>
-              <label className="flex items-center">
-                <input type="checkbox" className="mr-2" defaultChecked />
-                Quizzes
-              </label>
-            </div>
-          </div>
-        </div>
-      </Card>
     </div>
   );
 };

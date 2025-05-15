@@ -8,27 +8,30 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Light mode
-        'paper': 'var(--color-paper)',
+        'paper': {
+          DEFAULT: 'var(--color-paper)',
+          dark: 'var(--color-paper-dark)'
+        },
         'leather': 'var(--color-leather)',
-        'text': 'var(--color-text)',
-        'secondary': 'var(--color-secondary)',
-        
-        // Dark mode
-        'dark-leather': 'var(--color-dark-leather)',
-        'light-beige': 'var(--color-light-beige)',
-        'medium-brown': 'var(--color-medium-brown)',
+        'text': {
+          DEFAULT: 'var(--color-text)',
+          dark: 'var(--color-text-dark)'
+        },
+        'secondary': {
+          DEFAULT: 'var(--color-secondary)',
+          dark: 'var(--color-secondary-dark)'
+        }
       },
       fontFamily: {
-        handwriting: ['Caveat', 'cursive'],
-        sans: ['Roboto', 'Open Sans', 'sans-serif'],
+        heading: ['Merriweather', 'serif'],
+        sans: ['Inter', 'system-ui', 'sans-serif'],
         mono: ['Fira Code', 'Source Code Pro', 'monospace'],
       },
       boxShadow: {
-        'neu-light': '5px 5px 10px #d1d9e6, -5px -5px 10px #ffffff',
-        'neu-dark': '5px 5px 10px #3a2c1f, -5px -5px 10px #5a4231',
-        'neu-pressed-light': 'inset 5px 5px 10px #d1d9e6, inset -5px -5px 10px #ffffff',
-        'neu-pressed-dark': 'inset 5px 5px 10px #3a2c1f, inset -5px -5px 10px #5a4231',
+        sm: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+        DEFAULT: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+        md: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+        lg: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
       },
     },
   },

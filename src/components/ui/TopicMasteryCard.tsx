@@ -10,7 +10,18 @@ interface TopicMasteryCardProps {
 
 const TopicMasteryCard: React.FC<TopicMasteryCardProps> = ({ topicId, topicName }) => {
   const { topics, userLevel, calculateMasteryLevel } = useProgressStore();
-  const topic = topics[topicId];
+  const topic = topics[topicId] || {
+    id: topicId,
+    name: topicName,
+    quizzesTaken: 0,
+    correctAnswers: 0,
+    totalQuestions: 0,
+    examsTaken: 0,
+    examScores: [],
+    averageExamScore: 0,
+    lastStudied: null,
+    lastExamDate: null
+  };
   const masteryLevel = calculateMasteryLevel(topicId);
 
   const getMasteryLabel = (level: number): string => {
@@ -46,7 +57,7 @@ const TopicMasteryCard: React.FC<TopicMasteryCardProps> = ({ topicId, topicName 
           <div className="w-12 h-12 rounded-full bg-leather bg-opacity-10 flex items-center justify-center">
             <Trophy
               size={24}
-              className={`${masteryLevel >= 80 ? 'text-leather' : 'text-gray-400'}`}
+              className={`${masteryLevel >= 80 ? 'text-accent' : 'text-gray-400'}`}
             />
           </div>
           <div className="text-2xl font-bold">{masteryLevel}%</div>
@@ -75,7 +86,7 @@ const TopicMasteryCard: React.FC<TopicMasteryCardProps> = ({ topicId, topicName 
         {/* Exam Performance */}
         <div className="bg-secondary p-4 rounded-lg">
           <div className="flex items-center gap-2 mb-2">
-            <PenTool size={18} className="text-leather" />
+            <PenTool size={18} className="text-accent" />
             <h4 className="font-medium">Exam Performance (60%)</h4>
           </div>
           
@@ -112,7 +123,7 @@ const TopicMasteryCard: React.FC<TopicMasteryCardProps> = ({ topicId, topicName 
         {/* Quiz Performance */}
         <div className="bg-secondary p-4 rounded-lg">
           <div className="flex items-center gap-2 mb-2">
-            <BookOpen size={18} className="text-leather" />
+            <BookOpen size={18} className="text-accent" />
             <h4 className="font-medium">Quiz Performance (40%)</h4>
           </div>
           
@@ -154,7 +165,7 @@ const TopicMasteryCard: React.FC<TopicMasteryCardProps> = ({ topicId, topicName 
       {/* Study History */}
       <div className="border-t border-secondary pt-4">
         <div className="flex items-center gap-2 mb-3">
-          <BarChart2 size={18} className="text-leather" />
+          <BarChart2 size={18} className="text-accent" />
           <h4 className="font-medium">Study History</h4>
         </div>
         

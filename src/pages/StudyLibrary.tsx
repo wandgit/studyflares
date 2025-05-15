@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+
 import { format } from 'date-fns';
 import Card from '../components/ui/Card';
 import {
@@ -8,16 +9,16 @@ import {
   CardTitle,
 } from '../components/ui/Card';
 import Button from '../components/ui/Button';
-// import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/Tabs';
 import { ScrollArea } from '../components/ui/ScrollArea';
 import useStudyLibraryStore, { SavedStudyMaterial } from '../store/useStudyLibraryStore';
 import { Trash2Icon, FileTextIcon, BookOpen, Book, HelpCircle, MessageSquare, Network, PenTool, Trophy } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
-import { generateQuiz, generateExam, type QuizQuestion, type Exam, type ChatMessage } from '../services/geminiService';
+import { generateQuiz, generateExam, type ChatMessage, type QuizQuestion, QuestionDifficulty } from '../services/geminiService';
 import StudyCard from '../components/ui/StudyCard';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import ConceptMap from '../components/ui/ConceptMap';
+import type { ConceptNode, ConceptEdge } from '../components/ui/ConceptMap';
 import Quiz from '../components/ui/Quiz';
 import ChatInterface from '../components/ui/ChatInterface';
 import StudyTimer from '../components/ui/StudyTimer';
@@ -29,6 +30,7 @@ type StudyTab = 'guides' | 'flashcards' | 'quizzes' | 'chat' | 'concept-map' | '
 export default function StudyLibrary() {
   const { savedMaterials, removeMaterial } = useStudyLibraryStore();
   const { toast } = useToast();
+
   const [selectedMaterial, setSelectedMaterial] = useState<SavedStudyMaterial | null>(null);
   const [activeTab, setActiveTab] = useState<StudyTab>('guides');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -141,12 +143,44 @@ export default function StudyLibrary() {
   const handleStudySessionComplete = () => {
     toast({
       title: 'Study Session Complete',
-      description: 'Great job! You have completed your study session.',
+      description: 'Great job! Your progress has been saved.',
+    });
+  };
+
+  const handleQuizComplete = (score: number, totalPoints: number) => {
+    if (!selectedMaterial) return;
+
+    // Update topic progress and award XP
+    const baseXP = 50;
+    const accuracyBonus = Math.floor((score / totalPoints) * 50);
+    const totalXP = baseXP + accuracyBonus;
+
+    toast({
+      title: 'Quiz Complete!',
+      description: `You earned ${totalXP} XP! Score: ${score}/${totalPoints}`,
     });
   };
 
   // Render tab content based on active tab
   const renderTabContent = () => {
+    // Convert concept map data to match expected types
+    const convertedConceptMap = selectedMaterial?.conceptMap ? {
+      nodes: selectedMaterial.conceptMap.nodes.map(node => ({
+        id: node.id,
+        label: node.label,
+        level: node.level,
+        category: 'General',
+        description: '',
+        examples: []
+      })) as ConceptNode[],
+      edges: selectedMaterial.conceptMap.edges.map(edge => ({
+        id: edge.id,
+        from: edge.from,
+        to: edge.to,
+        label: edge.label || '',
+        type: 'default'
+      })) as ConceptEdge[]
+    } : null;
     if (!selectedMaterial) return null;
 
     switch (activeTab) {
@@ -202,14 +236,13 @@ export default function StudyLibrary() {
         }
         
         // Extract topic ID and name from the file name for Quiz component
-        const quizTopicId = selectedMaterial.fileName.replace(/\.[^/.]+$/, '');
-        const quizTopicName = selectedMaterial.fileName.replace(/\.[^/.]+$/, '').replace(/-/g, ' ');
-        
         return (
           <Quiz 
-            questions={selectedMaterial.quiz} 
-            topicId={quizTopicId}
-            topicName={quizTopicName}
+            initialQuestions={selectedMaterial.quiz || []}
+            content={selectedMaterial.studyGuide}
+            topicId={selectedMaterial.id}
+            topicName={selectedMaterial.fileName}
+            onComplete={handleQuizComplete}
           />
         );
 
@@ -235,7 +268,7 @@ export default function StudyLibrary() {
         
         return (
           <div className="h-[calc(100vh-200px)]">
-            <ConceptMap concepts={selectedMaterial.conceptMap} />
+            {convertedConceptMap && <ConceptMap concepts={convertedConceptMap} />}
           </div>
         );
 
@@ -304,7 +337,7 @@ export default function StudyLibrary() {
   return (
     <div className="container mx-auto py-6">
       <div className="mb-6">
-        <h1 className="font-handwriting text-4xl">Study Library</h1>
+        <h1 className="font-heading text-4xl">Study Library</h1>
         <p className="text-text opacity-70">
           Access your saved study materials
         </p>
@@ -339,7 +372,7 @@ export default function StudyLibrary() {
                             <FileTextIcon className="h-4 w-4" />
                             <p className="font-medium">{material.fileName}</p>
                           </div>
-                          <p className="text-xs text-text opacity-70">
+                          <p className="text-sm text-text dark:text-white opacity-70">
                             Added: {format(new Date(material.dateAdded), 'MMM d, yyyy')}
                           </p>
                         </div>
@@ -376,7 +409,7 @@ export default function StudyLibrary() {
               <div className="flex mb-6 border-b border-secondary overflow-x-auto">
                 <button
                   className={`px-4 py-3 flex items-center gap-2 border-b-2 whitespace-nowrap ${
-                    activeTab === 'guides' ? 'border-leather text-leather' : 'border-transparent'
+                    activeTab === 'guides' ? 'border-accent text-accent' : 'border-transparent'
                   }`}
                   onClick={() => setActiveTab('guides')}
                 >
@@ -386,7 +419,7 @@ export default function StudyLibrary() {
                 
                 <button
                   className={`px-4 py-3 flex items-center gap-2 border-b-2 whitespace-nowrap ${
-                    activeTab === 'flashcards' ? 'border-leather text-leather' : 'border-transparent'
+                    activeTab === 'flashcards' ? 'border-accent text-accent' : 'border-transparent'
                   }`}
                   onClick={() => setActiveTab('flashcards')}
                 >
@@ -396,7 +429,7 @@ export default function StudyLibrary() {
                 
                 <button
                   className={`px-4 py-3 flex items-center gap-2 border-b-2 whitespace-nowrap ${
-                    activeTab === 'quizzes' ? 'border-leather text-leather' : 'border-transparent'
+                    activeTab === 'quizzes' ? 'border-accent text-accent' : 'border-transparent'
                   }`}
                   onClick={() => setActiveTab('quizzes')}
                 >
@@ -406,7 +439,7 @@ export default function StudyLibrary() {
                 
                 <button
                   className={`px-4 py-3 flex items-center gap-2 border-b-2 whitespace-nowrap ${
-                    activeTab === 'chat' ? 'border-leather text-leather' : 'border-transparent'
+                    activeTab === 'chat' ? 'border-accent text-accent' : 'border-transparent'
                   }`}
                   onClick={() => setActiveTab('chat')}
                 >
@@ -416,7 +449,7 @@ export default function StudyLibrary() {
 
                 <button
                   className={`px-4 py-3 flex items-center gap-2 border-b-2 whitespace-nowrap ${
-                    activeTab === 'concept-map' ? 'border-leather text-leather' : 'border-transparent'
+                    activeTab === 'concept-map' ? 'border-accent text-accent' : 'border-transparent'
                   }`}
                   onClick={() => setActiveTab('concept-map')}
                 >
@@ -426,7 +459,7 @@ export default function StudyLibrary() {
 
                 <button
                   className={`px-4 py-3 flex items-center gap-2 border-b-2 whitespace-nowrap ${
-                    activeTab === 'exam' ? 'border-leather text-leather' : 'border-transparent'
+                    activeTab === 'exam' ? 'border-accent text-accent' : 'border-transparent'
                   }`}
                   onClick={() => setActiveTab('exam')}
                 >
@@ -436,7 +469,7 @@ export default function StudyLibrary() {
 
                 <button
                   className={`px-4 py-3 flex items-center gap-2 border-b-2 whitespace-nowrap ${
-                    activeTab === 'progress' ? 'border-leather text-leather' : 'border-transparent'
+                    activeTab === 'progress' ? 'border-accent text-accent' : 'border-transparent'
                   }`}
                   onClick={() => setActiveTab('progress')}
                 >

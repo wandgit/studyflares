@@ -73,7 +73,7 @@ const StudyCard = ({
                     {tags.map((tag, index) => (
                       <span 
                         key={index}
-                        className="px-2 py-0.5 text-xs rounded-full bg-leather bg-opacity-20 text-leather"
+                        className="px-2 py-0.5 text-xs rounded-full bg-accent bg-opacity-20 text-accent"
                       >
                         {tag}
                       </span>
@@ -88,10 +88,10 @@ const StudyCard = ({
                 </div>
                 
                 <div className="flex-1 flex items-center justify-center py-2">
-                  <h3 className="font-handwriting text-2xl text-center">{question}</h3>
+                  <h3 className="font-sans text-2xl text-center">{question}</h3>
                 </div>
                 
-                <p className="text-text opacity-50 text-sm flex items-center">
+                <p className="text-text dark:text-white opacity-70 text-sm flex items-center">
                   Tap to see answer <ArrowRight size={16} className="ml-1" />
                 </p>
               </Card>
@@ -113,7 +113,7 @@ const StudyCard = ({
               <Card className="w-full h-full flex flex-col p-4 justify-between cursor-pointer select-none">
                 <div className="absolute top-2 right-2">
                   {currentIndex !== undefined && totalCards !== undefined && (
-                    <span className="text-sm text-text opacity-70 font-medium">
+                    <span className="text-sm text-text dark:text-white opacity-70 font-medium">
                       Card {currentIndex + 1} of {totalCards}
                     </span>
                   )}
@@ -123,7 +123,7 @@ const StudyCard = ({
                   <p className="font-medium text-center">{answer}</p>
                 </div>
                 
-                <p className="text-text opacity-50 text-sm flex items-center justify-center">
+                <p className="text-text dark:text-white opacity-70 text-sm flex items-center justify-center">
                   Tap to see question <RefreshCw size={16} className="ml-1" />
                 </p>
               </Card>

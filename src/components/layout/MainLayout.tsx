@@ -37,7 +37,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
   };
 
   return (
-    <div className="flex h-screen w-full bg-paper text-text">
+    <div className="flex h-screen w-full bg-paper dark:bg-paper-dark text-text dark:text-white">
       <Sidebar isOpen={isSidebarOpen} onClose={toggleSidebar} isMobile={isMobile} />
 
       <div 
@@ -47,7 +47,7 @@ const MainLayout = ({ children }: MainLayoutProps) => {
       >
         <Header toggleSidebar={toggleSidebar} isMobile={isMobile} />
         
-        <main className="flex-1 overflow-auto p-4 md:p-6 bg-paper pb-20 md:pb-6">
+        <main className="flex-1 overflow-auto p-4 md:p-6 bg-paper dark:bg-paper-dark pb-20 md:pb-6">
           {children}
         </main>
       </div>

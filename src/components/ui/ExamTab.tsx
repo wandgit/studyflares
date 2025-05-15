@@ -64,14 +64,14 @@ const ExamTab = () => {
 
             <div className="space-y-4">
               {EXAM_STRUCTURE.map(section => (
-                <div key={section.type} className="flex justify-between items-center p-3 bg-secondary rounded-lg">
+                <div key={section.type} className="flex justify-between items-center p-3 bg-secondary/60 dark:bg-secondary/40 rounded-lg border border-border">
                   <div className="flex items-center gap-2">
-                    <List size={16} />
+                    <List size={16} className="text-text/70" />
                     <span>{section.type}</span>
                   </div>
                   <div className="text-sm">
                     <span className="font-medium">{section.count}</span> questions,{' '}
-                    <span className="text-leather">{section.points} points</span> each
+                    <span className="text-primary">{section.points} points</span> each
                   </div>
                 </div>
               ))}
@@ -79,7 +79,7 @@ const ExamTab = () => {
 
             <div className="pt-2">
               <div className="text-sm text-text opacity-70">Total Points Available</div>
-              <div className="text-2xl font-medium text-leather">{totalPoints} points</div>
+              <div className="text-2xl font-medium text-accent">{totalPoints} points</div>
             </div>
           </div>
         </Card>
@@ -102,10 +102,10 @@ const ExamTab = () => {
                 <button
                   key={option.value}
                   onClick={() => setSelectedDuration(option.value)}
-                  className={`p-4 rounded-lg border-2 transition-colors ${
+                  className={`p-4 rounded-lg border transition-colors ${
                     selectedDuration === option.value
-                      ? 'border-leather bg-leather bg-opacity-10'
-                      : 'border-transparent bg-secondary'
+                      ? 'border-primary bg-primary/5 dark:bg-primary/10'
+                      : 'border-border bg-secondary/60 dark:bg-secondary/40'
                   }`}
                 >
                   {option.label}

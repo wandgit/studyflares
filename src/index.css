@@ -13,9 +13,9 @@
     --color-secondary: #F0F0F0;
     
     /* Dark Mode */
-    --color-dark-leather: #4A3728;
-    --color-light-beige: #E6D7C3;
-    --color-medium-brown: #6B4E3D;
+    --color-paper-dark: #151515;
+    --color-text-dark: #FFFFFF;
+    --color-secondary-dark: #2A2A2A;
     
     font-synthesis: none;
     text-rendering: optimizeLegibility;
@@ -23,49 +23,64 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  /* Base styles with transitions */
   body {
     @apply bg-paper text-text font-sans;
     margin: 0;
     min-height: 100vh;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
   /* Dark mode styles */
   .dark body {
-    @apply bg-dark-leather text-light-beige;
+    background-color: var(--color-paper-dark);
+    color: var(--color-text-dark);
   }
 
-  /* Neumorphic styles for light mode */
-  .neumorphic-light {
-    @apply bg-paper shadow-neu-light;
-    border-radius: 16px;
+  .dark #root {
+    background-color: var(--color-paper-dark);
   }
 
-  .neumorphic-light-pressed {
-    @apply bg-paper shadow-neu-pressed-light;
-    border-radius: 16px;
+  /* Card and container styles */
+  .card, .dialog, .dropdown-menu {
+    @apply bg-paper;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
   }
 
-  /* Neumorphic styles for dark mode */
-  .dark .neumorphic-dark {
-    @apply bg-dark-leather shadow-neu-dark;
-    border-radius: 16px;
+  .dark .card, .dark .dialog, .dark .dropdown-menu {
+    background-color: var(--color-paper-dark);
+    border-color: var(--color-secondary-dark);
   }
 
-  .dark .neumorphic-dark-pressed {
-    @apply bg-dark-leather shadow-neu-pressed-dark;
-    border-radius: 16px;
+  /* Input and interactive element styles */
+  button, input, select, textarea {
+    transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+  }
+
+  .dark button:not(.btn-primary), .dark input, .dark select, .dark textarea {
+    background-color: var(--color-secondary-dark);
+    color: var(--color-text-dark);
+    border-color: var(--color-secondary-dark);
+  }
+
+  /* Accent colors */
+  .text-accent {
+    color: var(--color-leather);
+    transition: color 0.3s ease;
   }
 
   #root {
     display: block !important;
     min-height: 100vh;
-    background-color: white;
+    background-color: var(--color-paper);
+    transition: background-color 0.3s ease;
   }
 }
 
 @layer components {
   .btn {
-    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200;
+    @apply px-4 py-2 rounded-lg font-medium;
+    transition: all 0.3s ease;
   }
 
   .btn-primary {
@@ -73,15 +88,20 @@
   }
 
   .btn-outline {
-    @apply border border-leather text-leather hover:bg-leather hover:bg-opacity-10;
+    @apply border border-leather text-leather;
+  }
+
+  .dark .btn-outline {
+    @apply border-leather text-leather hover:bg-leather hover:bg-opacity-20;
   }
 
   .card {
-    @apply bg-paper rounded-lg overflow-hidden;
+    @apply bg-paper rounded-lg overflow-hidden shadow-sm;
   }
 
   .dark .card {
-    @apply bg-dark-leather;
+    background-color: var(--color-paper-dark);
+    border: 1px solid var(--color-secondary-dark);
   }
 
   .input {
@@ -89,17 +109,30 @@
   }
 
   .dark .input {
-    @apply border-medium-brown bg-dark-leather text-light-beige;
+    background-color: var(--color-secondary-dark);
+    border-color: var(--color-secondary-dark);
+    color: var(--color-text-dark);
+  }
+
+  .icon {
+    @apply text-text;
+    transition: color 0.3s ease;
+  }
+
+  .dark .icon {
+    color: var(--color-text-dark);
   }
 }
 
 /* Prose styles for rich text content */
 .prose {
   @apply text-text max-w-none;
+  transition: color 0.3s ease;
 }
 
 .prose h1, .prose h2, .prose h3, .prose h4 {
-  @apply font-handwriting text-leather;
+  @apply font-heading text-leather;
+  transition: color 0.3s ease;
 }
 
 .prose p {
@@ -115,9 +148,9 @@
 }
 
 .dark .prose {
-  @apply text-light-beige;
+  color: var(--color-text-dark);
 }
 
 .dark .prose h1, .dark .prose h2, .dark .prose h3, .dark .prose h4 {
-  @apply text-light-beige;
+  color: var(--color-leather);
 }

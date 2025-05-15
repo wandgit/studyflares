@@ -32,7 +32,7 @@ class StudyMaterialsService {
   async getStudyMaterial(id: string) {
     const { data: material, error } = await supabase
       .from('study_materials')
-      .select('*, profiles(name, avatar_url)')
+      .select('*, profiles(full_name, avatar_url)')
       .eq('id', id)
       .single();
 
@@ -54,7 +54,7 @@ class StudyMaterialsService {
   async getPublicStudyMaterials(subject?: string) {
     let query = supabase
       .from('study_materials')
-      .select('*, profiles(name, avatar_url)')
+      .select('*, profiles(full_name, avatar_url)')
       .eq('is_public', true)
       .order('created_at', { ascending: false });
 

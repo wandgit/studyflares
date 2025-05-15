@@ -10,20 +10,26 @@ interface LevelProgressCardProps {
 
 const LevelProgressCard: React.FC<LevelProgressCardProps> = ({ topicId, topicName }) => {
   const { userProgress, topics } = useProgressStore();
-  const topic = topicId ? topics[topicId] : null;
-
-  const getProgressBarColor = (level: number): string => {
-    if (level < 5) return 'bg-blue-500';
-    if (level < 10) return 'bg-green-500';
-    if (level < 15) return 'bg-purple-500';
-    return 'bg-leather';
-  };
+  
+  // Create default data if topic doesn't exist
+  const topic = topicId ? (topics[topicId] || {
+    id: topicId || 'default',
+    name: topicName || 'Document',
+    quizzesTaken: 0,
+    correctAnswers: 0,
+    totalQuestions: 0,
+    examsTaken: 0,
+    examScores: [],
+    averageExamScore: 0,
+    lastStudied: null,
+    lastExamDate: null
+  }) : null;
 
   const getAchievementIcon = (level: number) => {
     if (level < 5) return <Star className="text-blue-500" size={24} />;
     if (level < 10) return <Award className="text-green-500" size={24} />;
     if (level < 15) return <Trophy className="text-purple-500" size={24} />;
-    return <Trophy className="text-leather" size={24} />;
+    return <Trophy className="text-accent" size={24} />;
   };
 
   const progressPercentage = Math.min(

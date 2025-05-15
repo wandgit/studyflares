@@ -4,7 +4,7 @@ import VisNetworkMap from './VisNetworkMap';
 import { LayoutGrid, Network } from 'lucide-react';
 import Tooltip from './concept-maps/Tooltip';
 
-interface Branch {
+export interface Branch {
   title: string;
   nodes: ConceptNode[];
   x: number;
@@ -17,7 +17,7 @@ interface Branch {
   };
 }
 
-interface ConceptNode {
+export interface ConceptNode {
   id: number;
   label: string;
   level: number;
@@ -26,7 +26,7 @@ interface ConceptNode {
   examples: string[];
 }
 
-interface ConceptEdge {
+export interface ConceptEdge {
   id: number;
   from: number;
   to: number;

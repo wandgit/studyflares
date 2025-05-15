@@ -403,6 +403,10 @@ create policy "Users can update own sessions"
   using (auth.uid() = user_id);
 
 -- Statistics policies
+create policy "Users can insert their own statistics"
+  on public.user_statistics for insert
+  with check (auth.uid() = user_id);
+
 create policy "Users can view own statistics"
   on public.user_statistics for select
   using (auth.uid() = user_id);
@@ -410,6 +414,8 @@ create policy "Users can view own statistics"
 create policy "Users can update own statistics"
   on public.user_statistics for update
   using (auth.uid() = user_id);
+
+
 
 -- Exam policies
 create policy "Users can view own exams"

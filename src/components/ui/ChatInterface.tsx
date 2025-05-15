@@ -126,8 +126,8 @@ const ChatInterface = ({
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {displayMessages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
-            <Bot size={48} className="text-leather mb-4" />
-            <h3 className="font-handwriting text-xl mb-2">Ask me anything!</h3>
+            <Bot size={48} className="text-accent mb-4" />
+            <h3 className="font-sans text-xl mb-2">Ask me anything!</h3>
             <p className="text-text opacity-70 max-w-md">
               I can help you understand concepts, create study guides, and answer questions about your materials.
             </p>

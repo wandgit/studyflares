@@ -1,4 +1,3 @@
-import React from 'react';
 import Button from '../components/ui/Button';
 import { useToast } from '../hooks/use-toast';
 import useContentStore from '../store/useContentStore';

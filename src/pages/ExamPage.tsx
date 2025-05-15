@@ -128,7 +128,7 @@ const ExamPage = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Timer */}
-      <div className="fixed top-4 right-4 bg-white shadow-lg rounded-lg p-4">
+      <div className="fixed top-4 right-4 bg-paper dark:bg-paper-dark shadow-lg rounded-lg p-4">
         <div className="text-2xl font-mono">{formatTime(timeLeft)}</div>
       </div>
 
@@ -141,11 +141,11 @@ const ExamPage = () => {
                 <h2 className="text-2xl font-medium">
                   Question {currentQuestion + 1} of {exam.questions.length}
                 </h2>
-                <p className="text-text opacity-70 capitalize">
+                <p className="text-text dark:text-white opacity-70 capitalize">
                   {exam.questions[currentQuestion].type}
                 </p>
               </div>
-              <div className="text-leather font-medium">
+              <div className="text-accent font-medium">
                 {exam.questions[currentQuestion].points} points
               </div>
             </div>

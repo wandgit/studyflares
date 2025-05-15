@@ -4,8 +4,9 @@ import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import StudyCard from '../components/ui/StudyCard';
 import ChatInterface from '../components/ui/ChatInterface';
-import { BookOpen, Book, HelpCircle, MessageSquare, ArrowLeft, ArrowRight, Loader, Network, Trophy, PenTool, LibraryIcon } from 'lucide-react';
+import { BookOpen, Book, HelpCircle, MessageSquare, Loader, Network, Trophy, PenTool, LibraryIcon } from 'lucide-react';
 import ConceptMap from '../components/ui/ConceptMap';
+import type { ConceptNode, ConceptEdge } from '../components/ui/ConceptMap';
 import useContentStore from '../store/useContentStore';
 import useProgressStore from '../store/useProgressStore';
 import ReactMarkdown from 'react-markdown';
@@ -16,6 +17,8 @@ import LevelProgressCard from '../components/ui/LevelProgressCard';
 import Quiz from '../components/ui/Quiz';
 import ExamTab from '../components/ui/ExamTab';
 import SaveToLibraryButton from '../components/SaveToLibraryButton';
+import { AuthTrigger } from '../components/auth/AuthTrigger';
+
 
 type StudyTab = 'guides' | 'flashcards' | 'quizzes' | 'chat' | 'concept-map' | 'exam' | 'progress';
 
@@ -24,9 +27,7 @@ const StudyPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<StudyTab>('guides');
   const [currentFlashcardIndex, setCurrentFlashcardIndex] = useState(0);
-  const [currentQuizIndex, setCurrentQuizIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
-  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   
   // Get content from our global stores
   const { 
@@ -126,9 +127,11 @@ const StudyPage = () => {
       return (
         <Card className="p-6 text-center">
           <p className="mb-4">No content uploaded. Please upload content first.</p>
-          <Button variant="primary" onClick={() => navigate('/upload')}>
-            Upload Content
-          </Button>
+          <AuthTrigger returnUrl="/upload">
+            <Button variant="primary">
+              Upload Content
+            </Button>
+          </AuthTrigger>
         </Card>
       );
     }
@@ -235,7 +238,8 @@ const StudyPage = () => {
               <SaveToLibraryButton />
             </div>
             <Quiz
-              questions={quiz}
+              initialQuestions={quiz || []}
+              content={uploadedContent || ''}
               topicId={topicId}
               topicName={topicName}
               onComplete={handleQuizComplete}
@@ -275,7 +279,27 @@ const StudyPage = () => {
             <div className="flex justify-end mb-4">
               <SaveToLibraryButton />
             </div>
-            <ConceptMap concepts={conceptMap} />
+            {conceptMap && (
+              <ConceptMap
+                concepts={{
+                  nodes: conceptMap.nodes.map(node => ({
+                    id: node.id,
+                    label: node.label,
+                    level: node.level,
+                    category: 'General',
+                    description: '',
+                    examples: []
+                  })) as ConceptNode[],
+                  edges: conceptMap.edges.map(edge => ({
+                    id: edge.id,
+                    from: edge.from,
+                    to: edge.to,
+                    label: edge.label || '',
+                    type: 'default'
+                  })) as ConceptEdge[]
+                }}
+              />
+            )}
           </div>
         );
         
@@ -306,10 +330,10 @@ const StudyPage = () => {
     <div className="flex flex-col h-full">
       <div className="mb-6">
         <div className="flex justify-between items-center">
-          <h1 className="font-handwriting text-4xl">Study Materials</h1>
+          <h1 className="font-heading text-4xl">Study Materials</h1>
           <StudyTimer onComplete={handleStudySessionComplete} />
         </div>
-        <p className="text-text opacity-70">
+        <p className="text-text dark:text-white opacity-70">
           {uploadedFileName ? `Generated from: ${uploadedFileName}` : 'Upload content to generate study materials'}
         </p>
       </div>
@@ -317,7 +341,7 @@ const StudyPage = () => {
       <div className="flex mb-6 border-b border-secondary">
         <button
           className={`px-4 py-3 flex items-center gap-2 border-b-2 ${
-            activeTab === 'guides' ? 'border-leather text-leather' : 'border-transparent'
+            activeTab === 'guides' ? 'border-accent text-accent' : 'border-transparent'
           }`}
           onClick={() => handleTabChange('guides')}
         >
@@ -327,7 +351,7 @@ const StudyPage = () => {
         
         <button
           className={`px-4 py-3 flex items-center gap-2 border-b-2 ${
-            activeTab === 'flashcards' ? 'border-leather text-leather' : 'border-transparent'
+            activeTab === 'flashcards' ? 'border-accent text-accent' : 'border-transparent'
           }`}
           onClick={() => handleTabChange('flashcards')}
         >
@@ -337,7 +361,7 @@ const StudyPage = () => {
         
         <button
           className={`px-4 py-3 flex items-center gap-2 border-b-2 ${
-            activeTab === 'quizzes' ? 'border-leather text-leather' : 'border-transparent'
+            activeTab === 'quizzes' ? 'border-accent text-accent' : 'border-transparent'
           }`}
           onClick={() => handleTabChange('quizzes')}
         >
@@ -347,7 +371,7 @@ const StudyPage = () => {
         
         <button
           className={`px-4 py-3 flex items-center gap-2 border-b-2 ${
-            activeTab === 'chat' ? 'border-leather text-leather' : 'border-transparent'
+            activeTab === 'chat' ? 'border-accent text-accent' : 'border-transparent'
           }`}
           onClick={() => handleTabChange('chat')}
         >
@@ -357,7 +381,7 @@ const StudyPage = () => {
 
         <button
           className={`px-4 py-3 flex items-center gap-2 border-b-2 ${
-            activeTab === 'concept-map' ? 'border-leather text-leather' : 'border-transparent'
+            activeTab === 'concept-map' ? 'border-accent text-accent' : 'border-transparent'
           }`}
           onClick={() => handleTabChange('concept-map')}
         >
@@ -367,7 +391,7 @@ const StudyPage = () => {
 
         <button
           className={`px-4 py-3 flex items-center gap-2 border-b-2 ${
-            activeTab === 'exam' ? 'border-leather text-leather' : 'border-transparent'
+            activeTab === 'exam' ? 'border-accent text-accent' : 'border-transparent'
           }`}
           onClick={() => handleTabChange('exam')}
         >
@@ -377,7 +401,7 @@ const StudyPage = () => {
 
         <button
           className={`px-4 py-3 flex items-center gap-2 border-b-2 ${
-            activeTab === 'progress' ? 'border-leather text-leather' : 'border-transparent'
+            activeTab === 'progress' ? 'border-accent text-accent' : 'border-transparent'
           }`}
           onClick={() => handleTabChange('progress')}
         >

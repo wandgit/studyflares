@@ -208,7 +208,9 @@ export async function generateFlashcards(
  * @returns A promise that resolves to an array of quiz questions
  */
 export async function generateQuiz(
-  content: string
+  content: string,
+  difficulty: QuestionDifficulty = QuestionDifficulty.BEGINNER,
+  numQuestions: number = 20
 ): Promise<Array<QuizQuestion>> {
   try {
     const model = genAI.getGenerativeModel({
@@ -221,52 +223,79 @@ export async function generateQuiz(
     });
 
     const processedContent = processContent(content);
-    const prompt = `
-    Create a multiple-choice quiz based on the following content using the Feynman Learning Technique:
-    ${processedContent}
     
-    The Feynman Learning Technique involves explaining concepts in simple, plain language as if teaching a beginner.
-    
-    Generate 20 quiz questions that test conceptual understanding, not just memorization.
-    Each question should:
-    - Be written in clear, simple language
-    - Have 4 options with one correct answer
-    - Include a brief explanation that clarifies the concept in intuitive terms
-    
-    IMPORTANT: Your response MUST be a valid JSON array of objects. Follow these rules strictly:
-    1. Use double quotes for all strings, including property names
-    2. No trailing commas
-    3. No comments or additional text outside the JSON array
-    4. Properly escape any quotes or special characters within strings
-    
-    Format your response as a JSON array of objects with these exact fields:
-    [
-      {
-        "question": "What is the main reason plants need sunlight?",
-        "options": ["To stay warm", "To make food through photosynthesis", "To grow taller", "To produce oxygen"],
-        "correctAnswer": "To make food through photosynthesis",
-        "explanation": "Plants use sunlight as energy to convert water and carbon dioxide into sugar (their food). This process is called photosynthesis and is how plants make their own energy to grow.",
-        "difficulty": "medium",
-        "points": 10
-      }
-    ]
-    
-    For each question:
-    - Assign difficulty level (easy, medium, hard) based on complexity
-    - Assign points based on difficulty:
-      * easy: 5 points
-      * medium: 10 points
-      * hard: 15 points
-    
-    Return ONLY the JSON array. Do not include any text before or after the JSON array.
+    // Adjust difficulty-specific requirements
+    const difficultyRequirements = {
+      [QuestionDifficulty.BEGINNER]: 'Focus on basic concepts and definitions. Questions should test fundamental understanding.',
+      [QuestionDifficulty.INTERMEDIATE]: 'Include application of concepts and relationships between ideas. Questions should require deeper understanding.',
+      [QuestionDifficulty.ADVANCED]: 'Focus on complex relationships and advanced applications. Include analysis and problem-solving.',
+      [QuestionDifficulty.EXPERT]: 'Emphasize synthesis of multiple concepts and edge cases. Include challenging scenarios.',
+      [QuestionDifficulty.MASTER]: 'Test mastery through complex problem-solving and deep conceptual understanding. Include expert-level applications.'
+    }[difficulty];
+
+    const prompt = `Based on the following content, create a ${difficulty} level quiz. Generate exactly ${numQuestions} unique multiple-choice questions.
+
+${difficultyRequirements}
+
+Content: ${processedContent}
+
+For each question:
+1. Make it ${difficulty} level difficulty
+2. Include 4 options with one correct answer
+3. Provide a clear explanation for the correct answer
+4. Assign points based on difficulty (Beginner: 10, Intermediate: 20, Advanced: 30, Expert: 40, Master: 50)
+
+Make sure:
+1. Generate EXACTLY ${numQuestions} questions, no more and no less
+2. Questions test understanding and application at ${difficulty} level
+3. Options are clear and distinct
+4. Explanations help understanding
+5. All questions follow JSON format
+
+Format the response as a JSON array with objects containing:
+- question: string
+- options: string[]
+- correctAnswer: string (must be one of the options)
+- explanation: string
+- difficulty: string ("${difficulty}")
+- points: number (${DIFFICULTY_POINTS[difficulty]} points per question)
+
+IMPORTANT: The response MUST contain exactly ${numQuestions} questions. If you cannot generate ${numQuestions} unique questions, reuse concepts with different angles or examples.
+
     `;
 
     const result = await model.generateContent(prompt);
     const response = await result.response.text();
     
     try {
-      // Try to parse the JSON directly
-      return JSON.parse(response);
+      // Parse and validate the questions
+      const questions = JSON.parse(response) as Array<QuizQuestion>;
+      
+      // Validate question count
+      if (questions.length !== numQuestions) {
+        console.warn(`Generated ${questions.length} questions instead of ${numQuestions}. Adjusting...`);
+        
+        // If we have too few questions, duplicate some
+        while (questions.length < numQuestions) {
+          const questionToCopy = questions[Math.floor(Math.random() * questions.length)];
+          questions.push({
+            ...questionToCopy,
+            question: `Similar concept: ${questionToCopy.question}`,
+          });
+        }
+        
+        // If we have too many questions, take the first numQuestions
+        if (questions.length > numQuestions) {
+          questions.splice(numQuestions);
+        }
+      }
+      
+      // Ensure all questions have correct difficulty and points
+      return questions.map(q => ({
+        ...q,
+        difficulty: difficulty,
+        points: DIFFICULTY_POINTS[difficulty]
+      }));
     } catch (e) {
       // If direct parsing fails, try to clean and extract JSON from the response
       let cleanedResponse = response
@@ -279,16 +308,95 @@ export async function generateQuiz(
         .replace(/([\[{,]\s*)(['"])?([a-zA-Z0-9_]+)(['"])?\s*:/g, '$1"$3":'); // Ensure all keys are properly quoted
 
       try {
-        return JSON.parse(cleanedResponse);
+        const questions = JSON.parse(cleanedResponse) as Array<QuizQuestion>;
+        // Validate and adjust question count
+        if (questions.length !== numQuestions) {
+          console.warn(`Generated ${questions.length} questions instead of ${numQuestions}. Adjusting...`);
+          
+          // If we have too few questions, duplicate some
+          while (questions.length < numQuestions) {
+            const questionToCopy = questions[Math.floor(Math.random() * questions.length)];
+            questions.push({
+              ...questionToCopy,
+              question: `Similar concept: ${questionToCopy.question}`,
+            });
+          }
+          
+          // If we have too many questions, take the first numQuestions
+          if (questions.length > numQuestions) {
+            questions.splice(numQuestions);
+          }
+        }
+        
+        // Ensure all questions have correct difficulty and points
+        return questions.map(q => ({
+          ...q,
+          difficulty: difficulty,
+          points: DIFFICULTY_POINTS[difficulty]
+        }));
       } catch (e2) {
         // If cleaning didn't help, try to extract JSON array pattern
         const jsonMatch = response.match(/\[\s*\{[\s\S]*\}\s*\]/);
         if (!jsonMatch) {
-          throw new Error('Failed to parse quiz from model response');
+          // Log the raw response for debugging
+          console.error('Failed to parse quiz response. Raw response:', response);
+          throw new Error(`Failed to parse quiz response for ${difficulty} level`);
         }
         
-        const quizJson = jsonMatch[0];
-        return JSON.parse(quizJson);
+        try {
+          const quizJson = jsonMatch[0];
+          const questions = JSON.parse(quizJson) as Array<QuizQuestion>;
+          
+          // Validate question structure
+          const invalidQuestions = questions.filter(q => {
+            return !q.question || !Array.isArray(q.options) || q.options.length !== 4 || 
+                   !q.correctAnswer || !q.explanation;
+          });
+          
+          if (invalidQuestions.length > 0) {
+            console.error('Invalid question structure:', invalidQuestions);
+            throw new Error(`Invalid question structure in ${difficulty} level quiz`);
+          }
+          
+          // Validate and adjust question count
+          if (questions.length < numQuestions / 2) {
+            // If we have less than half the required questions, something went wrong
+            throw new Error(`Not enough valid questions generated for ${difficulty} level`);
+          }
+          
+          // Adjust question count if needed
+          if (questions.length !== numQuestions) {
+            console.warn(`Generated ${questions.length} questions instead of ${numQuestions}. Adjusting...`);
+            
+            // If we have too few questions, duplicate some with variations
+            while (questions.length < numQuestions) {
+              const questionToCopy = questions[Math.floor(Math.random() * questions.length)];
+              const newQuestion = {
+                ...questionToCopy,
+                question: `Similar concept: ${questionToCopy.question}`,
+                explanation: `Alternative explanation: ${questionToCopy.explanation}`
+              };
+              questions.push(newQuestion);
+            }
+            
+            // If we have too many questions, take a random subset to maintain variety
+            if (questions.length > numQuestions) {
+              const shuffled = [...questions].sort(() => Math.random() - 0.5);
+              questions.length = 0;
+              questions.push(...shuffled.slice(0, numQuestions));
+            }
+          }
+          
+          // Ensure all questions have correct difficulty and points
+          return questions.map(q => ({
+            ...q,
+            difficulty: difficulty,
+            points: DIFFICULTY_POINTS[difficulty]
+          }));
+        } catch (error) {
+          console.error('Error processing quiz JSON:', error);
+          throw new Error(`Failed to process ${difficulty} level quiz: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
       }
     }
   } catch (error) {
@@ -306,8 +414,30 @@ export type ChatMessage = {
   content: string;
 };
 
-// Define quiz question difficulty levels
-export type QuestionDifficulty = 'easy' | 'medium' | 'hard';
+// Define quiz question difficulty levels with corresponding point values
+export enum QuestionDifficulty {
+  BEGINNER = 'Beginner',
+  INTERMEDIATE = 'Intermediate',
+  ADVANCED = 'Advanced',
+  EXPERT = 'Expert',
+  MASTER = 'Master'
+}
+
+export const DIFFICULTY_POINTS: Record<QuestionDifficulty, number> = {
+  [QuestionDifficulty.BEGINNER]: 10,
+  [QuestionDifficulty.INTERMEDIATE]: 20,
+  [QuestionDifficulty.ADVANCED]: 30,
+  [QuestionDifficulty.EXPERT]: 40,
+  [QuestionDifficulty.MASTER]: 50
+};
+
+export const DIFFICULTY_ORDER: QuestionDifficulty[] = [
+  QuestionDifficulty.BEGINNER,
+  QuestionDifficulty.INTERMEDIATE,
+  QuestionDifficulty.ADVANCED,
+  QuestionDifficulty.EXPERT,
+  QuestionDifficulty.MASTER
+];
 
 // Define quiz question type with scoring
 export type QuizQuestion = {
@@ -395,6 +525,9 @@ export interface ConceptMapNode {
   id: number;
   label: string;
   level: number;
+  category?: string;
+  description?: string;
+  examples?: string[];
 }
 
 export interface ConceptMapEdge {
@@ -402,6 +535,7 @@ export interface ConceptMapEdge {
   from: number;
   to: number;
   label?: string;
+  type?: string;
 }
 
 export interface ConceptMap {
@@ -410,8 +544,67 @@ export interface ConceptMap {
 }
 
 export interface ConceptMap {
-  nodes: Array<{ id: number; label: string; level: number }>;
-  edges: Array<{ id: number; from: number; to: number; label?: string }>;
+  nodes: ConceptMapNode[];
+  edges: ConceptMapEdge[];
+}
+
+/**
+ * Validates and adjusts a concept map to ensure it meets our requirements
+ */
+function validateAndAdjustConceptMap(conceptMap: ConceptMap): ConceptMap {
+  if (!conceptMap.nodes || !Array.isArray(conceptMap.nodes)) {
+    throw new Error('Invalid concept map: missing or invalid nodes array');
+  }
+
+  if (!conceptMap.edges || !Array.isArray(conceptMap.edges)) {
+    throw new Error('Invalid concept map: missing or invalid edges array');
+  }
+
+  // Ensure we have enough nodes
+  if (conceptMap.nodes.length < 15) {
+    console.warn(`Generated ${conceptMap.nodes.length} nodes instead of at least 15. Adjusting...`);
+    
+    // If we have too few nodes, duplicate some with variations
+    while (conceptMap.nodes.length < 15) {
+      const nodeToCopy = conceptMap.nodes[Math.floor(Math.random() * conceptMap.nodes.length)];
+      const newNode = {
+        ...nodeToCopy,
+        id: conceptMap.nodes.length + 1,
+        label: `Related concept: ${nodeToCopy.label}`,
+        description: `Alternative perspective on ${nodeToCopy.label}`,
+        examples: [...(nodeToCopy.examples || [])]
+      };
+      
+      // Add an edge from the original to the new node
+      conceptMap.edges.push({
+        id: conceptMap.edges.length + 1,
+        from: nodeToCopy.id,
+        to: newNode.id,
+        label: 'relates to',
+        type: 'relationship'
+      });
+      
+      conceptMap.nodes.push(newNode);
+    }
+  }
+
+  // Ensure all nodes have required fields
+  conceptMap.nodes = conceptMap.nodes.map(node => ({
+    ...node,
+    level: node.level || 1,
+    category: node.category || 'Concept',
+    description: node.description || `Understanding of ${node.label}`,
+    examples: node.examples || []
+  }));
+
+  // Ensure all edges have required fields
+  conceptMap.edges = conceptMap.edges.map(edge => ({
+    ...edge,
+    label: edge.label || 'relates to',
+    type: edge.type || 'relationship'
+  }));
+
+  return conceptMap;
 }
 
 export async function generateConceptMap(content: string): Promise<ConceptMap> {
@@ -514,17 +707,39 @@ export async function generateConceptMap(content: string): Promise<ConceptMap> {
 
     const result = await model.generateContent(prompt);
     const response = await result.response.text();
-    
+
     try {
-      return JSON.parse(response);
+      // First try direct parsing
+      let conceptMap = JSON.parse(response) as ConceptMap;
+      return validateAndAdjustConceptMap(conceptMap);
     } catch (e) {
-      // If direct parsing fails, try to extract JSON from the response
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('Failed to parse concept map from model response');
+      // If direct parsing fails, try to clean the response
+      try {
+        // Remove markdown formatting if present
+        let cleanedResponse = response
+          .replace(/^```json\s*/, '') // Remove leading ```json
+          .replace(/\s*```$/, '') // Remove trailing ```
+          .trim();
+
+        // Try to parse the cleaned response
+        let conceptMap = JSON.parse(cleanedResponse) as ConceptMap;
+        return validateAndAdjustConceptMap(conceptMap);
+      } catch (e2) {
+        // If cleaning didn't help, try to extract JSON object pattern
+        const jsonMatch = response.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+          console.error('Error parsing concept map:', e2);
+          throw new Error('Failed to parse concept map - no valid JSON found');
+        }
+        
+        try {
+          let conceptMap = JSON.parse(jsonMatch[0]) as ConceptMap;
+          return validateAndAdjustConceptMap(conceptMap);
+        } catch (e3) {
+          console.error('Error parsing extracted JSON:', e3);
+          throw new Error('Failed to parse concept map - invalid JSON structure');
+        }
       }
-      
-      return JSON.parse(jsonMatch[0]);
     }
   } catch (error) {
     console.error('Error generating concept map:', error);

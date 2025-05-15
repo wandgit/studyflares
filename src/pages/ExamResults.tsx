@@ -140,10 +140,10 @@ const ExamResults = () => {
         <Card className="p-8">
           <div className="text-center">
             <h1 className="text-4xl font-medium mb-2">Exam Results</h1>
-            <div className="text-6xl font-bold text-leather my-6">
+            <div className="text-6xl font-bold text-accent my-6">
               {Math.round(report.score)}%
             </div>
-            <p className="text-lg mb-6">
+            <p className="text-lg mb-6 text-text dark:text-white">
               {report.score >= 90 ? 'Excellent work! You have mastered this material.' :
                report.score >= 80 ? 'Great job! You have a strong understanding of the material.' :
                report.score >= 70 ? 'Good work! You understand most of the material.' :

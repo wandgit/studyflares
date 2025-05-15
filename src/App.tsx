@@ -1,77 +1,127 @@
-import { BrowserRouter as Router, Routes, Route, Outlet, Navigate } from 'react-router-dom';
-import { ThemeProvider } from './components/common/ThemeProvider.tsx';
-import { Toaster } from './components/ui/toaster.tsx';
-import { Toaster as HotToaster } from 'react-hot-toast';
-import MainLayout from './components/layout/MainLayout.tsx';
-import Navbar from './components/layout/Navbar.tsx';
-import HomePage from './pages/HomePage.tsx';
-import UploadPage from './pages/UploadPage.tsx';
-import StudyPage from './pages/StudyPage.tsx';
-import ProfilePage from './pages/ProfilePage.tsx';
-import ExamPage from './pages/ExamPage.tsx';
-import ExamResults from './pages/ExamResults.tsx';
-import StudyLibrary from './pages/StudyLibrary.tsx';
-import AuthPage from './pages/AuthPage.tsx';
-import AuthCallbackPage from './pages/AuthCallbackPage.tsx';
-import ProtectedRoute from './components/auth/ProtectedRoute.tsx';
-import useAuthStore from './store/useAuthStore.ts';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
+import HomePage from './pages/HomePage';
+
+import ProfileSetup from './pages/ProfileSetup';
+import ProfilePage from './pages/ProfilePage';
+import StudyPage from './pages/StudyPage';
+import ExamPage from './pages/ExamPage';
+import ExamResults from './pages/ExamResults';
+import StudyLibrary from './pages/StudyLibrary';
+import UploadPage from './pages/UploadPage';
+import DashboardPage from './pages/DashboardPage';
+import MainLayout from './components/layout/MainLayout';
+import { ThemeProvider } from './components/common/ThemeProvider';
+import { AuthProvider } from './components/auth/AuthProvider';
+import { QueryProvider } from './components/providers/QueryProvider';
+// Auth overlay is now handled by AuthTrigger component
+import { useAuth } from './components/auth/AuthProvider';
+import { RequireAuth } from './components/auth/RequireAuth';
+
+const AppContent = () => {
+  useAuth(); // Initialize auth context
+  return (
+    <div className="min-h-screen bg-paper text-text">
+      <Routes>
+        <Route path="/" element={
+          <MainLayout>
+            <HomePage />
+          </MainLayout>
+        } />
+        
+
+
+        <Route path="/profile" element={
+          <RequireAuth>
+            <MainLayout>
+              <ProfilePage />
+            </MainLayout>
+          </RequireAuth>
+        } />
+
+        <Route path="/profile/setup" element={
+          <MainLayout>
+            <ProfileSetup />
+          </MainLayout>
+        } />
+
+        <Route path="/study" element={
+          <MainLayout>
+            <StudyPage />
+          </MainLayout>
+        } />
+
+        <Route path="/exam" element={
+          <MainLayout>
+            <ExamPage />
+          </MainLayout>
+        } />
+
+        <Route path="/exam/results" element={
+          <MainLayout>
+            <ExamResults />
+          </MainLayout>
+        } />
+
+        <Route path="/library" element={
+          <MainLayout>
+            <StudyLibrary />
+          </MainLayout>
+        } />
+
+        <Route path="/upload" element={
+          <RequireAuth>
+            <MainLayout>
+              <UploadPage />
+            </MainLayout>
+          </RequireAuth>
+        } />
+
+        <Route path="/dashboard" element={
+          <RequireAuth>
+            <MainLayout>
+              <DashboardPage />
+            </MainLayout>
+          </RequireAuth>
+        } />
+
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+
+      <Toaster 
+        position="top-right"
+        toastOptions={{
+          error: {
+            duration: 5000,
+            style: {
+              background: '#FEE2E2',
+              color: '#991B1B',
+            },
+          },
+          success: {
+            duration: 3000,
+            style: {
+              background: '#ECFDF5',
+              color: '#065F46',
+            },
+          },
+        }}
+      />
+
+      {/* Auth overlay is now handled by AuthTrigger component */}
+    </div>
+  );
+};
 
 function App() {
-  const { isAuthenticated } = useAuthStore();
-
   return (
     <ThemeProvider>
       <Router>
-        <div className="min-h-screen bg-paper text-text">
-          {isAuthenticated && <Navbar />}
-          
-          <Routes>
-            {/* Auth routes */}
-            <Route path="/auth" element={<AuthPage />} />
-            <Route path="/auth/callback" element={<AuthCallbackPage />} />
-
-            {/* Protected routes */}
-            <Route path="/" element={
-              <ProtectedRoute>
-                <MainLayout>
-                  <Outlet />
-                </MainLayout>
-              </ProtectedRoute>
-            }>
-              <Route index element={<HomePage />} />
-              <Route path="upload" element={<UploadPage />} />
-              <Route path="study" element={<StudyPage />} />
-              <Route path="library" element={<StudyLibrary />} />
-              <Route path="exam" element={<ExamPage />} />
-              <Route path="exam/results" element={<ExamResults />} />
-              <Route path="profile" element={<ProfilePage />} />
-            </Route>
-
-            {/* Redirect unmatched routes */}
-            <Route path="*" element={<Navigate to="/auth" replace />} />
-          </Routes>
-
-          <HotToaster 
-            position="top-right"
-            toastOptions={{
-              error: {
-                duration: 5000,
-                style: {
-                  background: '#FEE2E2',
-                  color: '#991B1B',
-                },
-              },
-              success: {
-                duration: 3000,
-                style: {
-                  background: '#ECFDF5',
-                  color: '#065F46',
-                },
-              },
-            }}
-          />
-          <Toaster />
-        </div>
+        <AuthProvider>
+          <QueryProvider>
+            <AppContent />
+          </QueryProvider>
+        </AuthProvider>
       </Router>
     </ThemeProvider>
   );

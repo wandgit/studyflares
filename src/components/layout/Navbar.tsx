@@ -1,17 +1,9 @@
 import React from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Book, Home, User, BookOpen, LogOut } from 'lucide-react';
-import useAuthStore from '../../store/useAuthStore';
+import { Link, useLocation } from 'react-router-dom';
+import { Book, Home, User, BookOpen } from 'lucide-react';
 
 const Navbar: React.FC = () => {
   const location = useLocation();
-  const navigate = useNavigate();
-  const { logout, currentUser } = useAuthStore();
-
-  const handleLogout = () => {
-    logout();
-    navigate('/auth');
-  };
 
   const navItems = [
     { path: '/', label: 'Home', icon: <Home size={20} /> },
@@ -30,28 +22,14 @@ const Navbar: React.FC = () => {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
               <Link to="/" className="flex items-center">
-                <span className="font-handwriting text-2xl text-leather">Study Flares</span>
+                <span className="font-heading text-2xl text-accent">Study Flares</span>
               </Link>
             </div>
             
             {/* Removed navigation links for desktop view */}
             
             <div className="flex items-center">
-              {currentUser && (
-                <div className="flex items-center">
-                  <span className="mr-3 text-sm">
-                    {currentUser.name}
-                  </span>
-                  <button
-                    onClick={handleLogout}
-                    className="flex items-center px-3 py-2 rounded-md text-sm font-medium hover:bg-secondary"
-                    title="Logout"
-                  >
-                    <LogOut size={20} />
-                    <span className="ml-2">Logout</span>
-                  </button>
-                </div>
-              )}
+              {/* Auth will be added here later */}
             </div>
           </div>
         </div>
@@ -64,7 +42,7 @@ const Navbar: React.FC = () => {
             <Link
               key={item.path}
               to={item.path}
-              className={`flex flex-col items-center justify-center ${location.pathname === item.path ? 'text-leather' : 'text-text hover:text-leather'}`}
+              className={`flex flex-col items-center justify-center ${location.pathname === item.path ? 'text-accent' : 'text-text hover:text-accent'}`}
             >
               {item.icon}
               <span className="text-xs mt-1">{item.label}</span>
