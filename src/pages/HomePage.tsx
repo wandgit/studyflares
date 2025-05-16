@@ -112,7 +112,7 @@ const HomePage = () => {
       
       {/* Recent Activity Section */}
       <section className="mb-8 md:mb-12">
-        <RecentActivity userId={undefined} maxItems={3} showViewAll={true} />
+        <RecentActivity userId={profile?.id} maxItems={3} />
       </section>
       
       {/* Features */}

@@ -1072,31 +1072,85 @@ ${JSON.stringify({ exam, answers }, null, 2)}`;
       }
     }
 
+    console.log('Raw response from AI:', response);
+    console.log('Extracted JSON string:', jsonStr);
+
     if (!jsonStr) {
       console.error('No JSON found in response');
       throw new Error('Invalid response format: No JSON found');
     }
 
-    // Clean up common JSON issues
-    jsonStr = jsonStr
-      // Remove any non-JSON text before the first {
-      .replace(/^[^{]*({.*})[^}]*$/, '$1')
-      // Remove comments
-      .replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '')
-      // Fix trailing commas
-      .replace(/,\s*([}\]])/g, '$1')
-      // Fix missing quotes around property names
-      .replace(/([{,]\s*)([\w]+)\s*:/g, '$1"$2":')
-      // Escape newlines in strings
-      .replace(/(["'])([^"']*?)\n([^"']*?)(["'])/g, '$1$2\\n$3$4')
-      // Remove any remaining newlines outside of strings
-      .replace(/\s*\n\s*/g, ' ')
-      // Ensure proper string values
-      .replace(/:\s*([^\s"'\[{][^,}\]]*)/g, ': "$1"')
-      // Fix double quotes
-      .replace(/"{2,}/g, '"')
-      // Remove any remaining whitespace between tokens
-      .replace(/\s+/g, ' ').trim()
+    // Try to parse the JSON first without modifications
+    try {
+      JSON.parse(jsonStr);
+      console.log('JSON is valid without cleaning');
+    } catch (initialError) {
+      console.log('Initial JSON parse failed, attempting to clean');
+      
+      try {
+        // Clean up common JSON issues
+        jsonStr = jsonStr
+          // Remove any non-JSON text before the first { and after the last }
+          .replace(/^[^{]*({[\s\S]*})[^}]*$/, '$1')
+          // Remove comments
+          .replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '')
+          // Fix trailing commas
+          .replace(/,\s*([}\]])/g, '$1')
+          // Fix missing quotes around property names (more comprehensive)
+          .replace(/([{,]\s*)([a-zA-Z0-9_]+)(\s*:)/g, '$1"$2"$3')
+          // Escape newlines in strings
+          .replace(/(["'])(.*?)\n(.*?)(["'])/g, '$1$2\\n$3$4')
+          // Remove any remaining newlines outside of strings
+          .replace(/\s*\n\s*/g, ' ')
+          // Fix unquoted string values (but not numbers, booleans, or null)
+          .replace(/:\s*([^"{}\[\],\s][^,}\]]*?)([,}\]])/g, ':"$1"$2')
+          // Fix double quotes
+          .replace(/"{2,}/g, '"')
+          // Remove any remaining whitespace between tokens
+          .replace(/\s+/g, ' ').trim();
+
+        console.log('Cleaned JSON string:', jsonStr);
+        
+        // Try parsing again after cleaning
+        try {
+          JSON.parse(jsonStr);
+          console.log('JSON is valid after cleaning');
+        } catch (secondError) {
+          console.error('Standard cleaning failed, attempting recovery');
+          
+          // Create a fallback response with minimal structure
+          const fallbackResponse: AIGradingResponse = {
+            questionScores: {},
+            feedback: {},
+            improvements: {},
+            keyConcepts: {},
+            overallFeedback: "There was an issue processing your exam results.",
+            strengths: ["Your attempt at this exam"],
+            weaknesses: ["Technical issues prevented full evaluation"]
+          };
+          
+          // Try to extract any valid parts from the response
+          try {
+            // Extract question IDs from the exam
+            exam.questions.forEach((q: ExamQuestion) => {
+              fallbackResponse.questionScores[q.id] = 0;
+              fallbackResponse.feedback[q.id] = "Could not evaluate this answer due to technical issues.";
+              fallbackResponse.improvements[q.id] = ["Review the material and try again."];
+              fallbackResponse.keyConcepts[q.id] = ["Core concepts", "Key principles"];
+            });
+            
+            jsonStr = JSON.stringify(fallbackResponse);
+            console.log('Using fallback response');
+          } catch (fallbackError: unknown) {
+            const errorMessage = fallbackError instanceof Error ? fallbackError.message : 'Unknown error';
+            throw new Error(`Failed to create fallback response: ${errorMessage}`);
+          }
+        }
+      } catch (cleaningError: unknown) {
+        const errorMessage = cleaningError instanceof Error ? cleaningError.message : 'Unknown error';
+        throw new Error(`Failed to clean JSON response: ${errorMessage}`);
+      }
+    }
     console.log('Cleaned JSON string:', jsonStr);
 
     let partialReport: AIGradingResponse;
@@ -1104,19 +1158,24 @@ ${JSON.stringify({ exam, answers }, null, 2)}`;
       // Try to parse the cleaned JSON
       partialReport = JSON.parse(jsonStr) as AIGradingResponse;
       console.log('Successfully parsed JSON:', partialReport);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to parse JSON:', error);
       console.error('JSON string that failed:', jsonStr);
       
       // Try to identify the specific issue
-      const position = error.message.match(/position (\d+)/)?.[1];
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const positionMatch = errorMessage.match(/position (\d+)/);
+      const position = positionMatch ? positionMatch[1] : null;
+      
       if (position) {
-        const problemArea = jsonStr.substring(Math.max(0, Number(position) - 20), 
-                                           Math.min(jsonStr.length, Number(position) + 20));
+        const problemArea = jsonStr.substring(
+          Math.max(0, Number(position) - 20), 
+          Math.min(jsonStr.length, Number(position) + 20)
+        );
         console.error(`Problem area in JSON (around position ${position}):`, problemArea);
       }
       
-      throw new Error(`Failed to parse grading response: ${error?.message || 'Unknown error'}`);
+      throw new Error(`Failed to parse grading response: ${errorMessage}`);
     }
 
     // Validate required fields

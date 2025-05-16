@@ -3,10 +3,13 @@ import { useEffect, useState } from 'react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import { Exam, ExamReport, gradeExam } from '../services/geminiService';
-import { ArrowLeft, Check, X } from 'lucide-react';
+import { ArrowLeft, Check, X, TrendingUp } from 'lucide-react';
 import GradingLoader from '../components/ui/GradingLoader';
 import useProgressStore from '../store/useProgressStore';
 import { toast } from 'react-hot-toast';
+import { examAnalyticsService } from '../services/database/examAnalytics';
+import { useAuth } from '../hooks/useAuth';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface ExamResultsProps {
   exam: Exam;
@@ -16,10 +19,13 @@ interface ExamResultsProps {
 const ExamResults = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [report, setReport] = useState<ExamReport | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [progressUpdated, setProgressUpdated] = useState(false);
+  const [startTime] = useState<number>(Date.now());
+  const [performanceTrends, setPerformanceTrends] = useState<any[]>([]);
   
   // Get progress store methods
   const { recordExamResult } = useProgressStore();
@@ -44,6 +50,19 @@ const ExamResults = () => {
   };
 
   useEffect(() => {
+    const loadPerformanceTrends = async () => {
+      try {
+        const trends = await examAnalyticsService.getUserPerformanceTrends(user!.id);
+        setPerformanceTrends(trends);
+      } catch (error) {
+        console.error('Failed to load performance trends:', error);
+      }
+    };
+
+    loadPerformanceTrends();
+  }, [user]);
+
+  useEffect(() => {
     const examData = getExamData();
     
     if (!examData) {
@@ -60,6 +79,31 @@ const ExamResults = () => {
         console.log('Starting exam grading...');
         const examReport = await gradeExam(examData.exam, examData.answers);
         console.log('Received exam report:', examReport);
+        
+        // Calculate time spent on each question (this is a simple estimation)
+        const totalTime = (Date.now() - startTime) / 1000; // Convert to seconds
+        const avgTimePerQuestion = totalTime / examData.exam.questions.length;
+        const times = examData.exam.questions.reduce((acc, q) => {
+          acc[q.id] = avgTimePerQuestion;
+          return acc;
+        }, {} as Record<string, number>);
+
+        // Save analytics if user is authenticated
+        if (user) {
+          try {
+            await examAnalyticsService.saveAttemptAnalytics(
+              examData.exam.id,
+              examReport,
+              totalTime,
+              times
+            );
+            toast.success('Exam results saved successfully');
+          } catch (error) {
+            console.error('Failed to save exam analytics:', error);
+            toast.error('Failed to save exam results');
+          }
+        }
+
         setReport(examReport);
       } catch (error: any) {
         console.error('Failed to grade exam:', error);
@@ -136,12 +180,64 @@ const ExamResults = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-4xl mx-auto space-y-8">
-        {/* Overall Score */}
+        {/* Overall Score and Analytics */}
         <Card className="p-8">
           <div className="text-center">
             <h1 className="text-4xl font-medium mb-2">Exam Results</h1>
             <div className="text-6xl font-bold text-accent my-6">
               {Math.round(report.score)}%
+            </div>
+            <div className="mt-8">
+              <h2 className="text-xl font-semibold mb-4">Overall Performance</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div className="bg-secondary p-4 rounded">
+                  <div className="text-sm font-medium mb-2">Score</div>
+                  <div className="text-2xl font-bold">{report.score}%</div>
+                </div>
+                <div className="bg-secondary p-4 rounded">
+                  <div className="text-sm font-medium mb-2">Time Spent</div>
+                  <div className="text-2xl font-bold">
+                    {((Date.now() - startTime) / 1000 / 60).toFixed(1)} minutes
+                  </div>
+                </div>
+              </div>
+
+              {performanceTrends.length > 0 && (
+                <div className="mb-8 bg-secondary p-4 rounded">
+                  <h3 className="text-lg font-semibold mb-4">Performance History</h3>
+                  <div className="h-[300px] w-full">
+                    <ResponsiveContainer>
+                      <LineChart data={performanceTrends}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis 
+                          dataKey="date" 
+                          tickFormatter={(date) => new Date(date).toLocaleDateString()}
+                        />
+                        <YAxis domain={[0, 100]} />
+                        <Tooltip 
+                          labelFormatter={(date) => new Date(date).toLocaleDateString()}
+                          formatter={(value: number) => [`${value.toFixed(1)}%`, 'Score']}
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="score" 
+                          stroke="#4f46e5" 
+                          strokeWidth={2}
+                          dot={{ fill: '#4f46e5' }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 gap-4">
+                <div className="bg-secondary p-4 rounded">
+                  <TrendingUp className="w-6 h-6 mb-2 text-accent" />
+                  <div className="text-sm font-medium">Total Questions</div>
+                  <div className="text-lg">{Object.keys(report.questionScores).length}</div>
+                </div>
+              </div>
             </div>
             <p className="text-lg mb-6 text-text dark:text-white">
               {report.score >= 90 ? 'Excellent work! You have mastered this material.' :
@@ -221,6 +317,26 @@ const ExamResults = () => {
                             .replace(/&gt;/g, '>')
                         }} 
                       />
+                    </div>
+
+                    <div className="mb-4">
+                      <div className="text-sm font-medium mb-2">Key Concepts:</div>
+                      <div className="flex flex-wrap gap-2">
+                        {report.keyConcepts[question.id]?.map((concept, i) => (
+                          <span key={i} className="px-2 py-1 bg-primary/10 rounded-full text-xs">
+                            {concept}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="mb-4">
+                      <div className="text-sm font-medium mb-2">Improvement Suggestions:</div>
+                      <ul className="list-disc list-inside text-sm space-y-1">
+                        {report.improvements[question.id]?.map((suggestion, i) => (
+                          <li key={i}>{suggestion}</li>
+                        ))}
+                      </ul>
                     </div>
 
                     <div className="mb-4">

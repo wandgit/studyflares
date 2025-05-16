@@ -9,8 +9,6 @@ const Navbar: React.FC = () => {
     { path: '/', label: 'Home', icon: <Home size={20} /> },
     { path: '/study', label: 'Study', icon: <Book size={20} /> },
     { path: '/library', label: 'Library', icon: <BookOpen size={20} /> },
-    // Community feature temporarily disabled
-    // { path: '/community', label: 'Community', icon: <Users size={20} /> },
     { path: '/profile', label: 'Profile', icon: <User size={20} /> },
   ];
 

@@ -9,7 +9,6 @@ import ExamPage from './pages/ExamPage';
 import ExamResults from './pages/ExamResults';
 import StudyLibrary from './pages/StudyLibrary';
 import UploadPage from './pages/UploadPage';
-import DashboardPage from './pages/DashboardPage';
 import MainLayout from './components/layout/MainLayout';
 import { ThemeProvider } from './components/common/ThemeProvider';
 import { AuthProvider } from './components/auth/AuthProvider';
@@ -77,13 +76,7 @@ const AppContent = () => {
           </RequireAuth>
         } />
 
-        <Route path="/dashboard" element={
-          <RequireAuth>
-            <MainLayout>
-              <DashboardPage />
-            </MainLayout>
-          </RequireAuth>
-        } />
+
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

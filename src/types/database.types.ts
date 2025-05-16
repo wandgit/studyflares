@@ -49,6 +49,33 @@ export interface DBExamQuestion {
   updated_at: string;
 }
 
+export interface PerformanceMetrics {
+  accuracy_rate: number;
+  completion_rate: number;
+  average_time_per_question: number;
+  difficulty_breakdown: {
+    easy: number | null;
+    medium: number | null;
+    hard: number | null;
+  };
+}
+
+export interface QuestionAnalytics {
+  id: string;
+  attempt_id: string;
+  question_id: string;
+  time_spent: string;
+  score: number;
+  is_correct: boolean;
+  answer_text: string;
+  feedback: string;
+  key_concepts: string[];
+  improvement_suggestions: string[];
+  metadata: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface DBExamAttempt {
   id: string;
   user_id: string;
@@ -57,10 +84,27 @@ export interface DBExamAttempt {
   passed: boolean;
   start_time: string;
   end_time: string | null;
+  total_time_spent: string;
+  question_times: Record<string, number>;
+  performance_metrics: PerformanceMetrics;
+  question_feedback: Record<string, string>;
+  strengths: string[];
+  weaknesses: string[];
+  improvement_areas: Record<string, string[]>;
   answers: Record<string, any>[];
   metadata: Record<string, any>;
   created_at: string;
   updated_at: string;
+}
+
+export interface WeeklyStudyTime {
+  day: string;
+  minutes: number;
+}
+
+export interface SubjectPerformance {
+  subject: string;
+  score: number;
 }
 
 export interface DBUserStatistics {
@@ -71,6 +115,8 @@ export interface DBUserStatistics {
   exams_passed: number;
   materials_created: number;
   last_activity: string;
+  weekly_study_time: WeeklyStudyTime[];
+  subject_performance: SubjectPerformance[];
   metadata: Record<string, any>;
   created_at: string;
   updated_at: string;

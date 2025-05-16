@@ -1,195 +1,150 @@
-import { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import Card from '../components/ui/Card';
-import Button from '../components/ui/Button';
-import { Exam, ExamQuestion } from '../services/geminiService';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { examService } from '../services/database/exam';
+import { examAnalyticsService } from '../services/database/examAnalytics';
+import { Exam } from '../types/exam';
+import { ArrowLeft, ArrowRight, Check, X } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-const ExamPage = () => {
-  const location = useLocation();
+const ExamPage: React.FC = () => {
+  const { examId } = useParams<{ examId: string }>();
+  const { user } = useAuth();
   const navigate = useNavigate();
-  const exam = location.state?.exam as Exam;
-
-  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [exam, setExam] = useState<Exam | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
-  // Initialize timer from localStorage or exam duration
-  const [timeLeft, setTimeLeft] = useState(() => {
-    const savedTime = localStorage.getItem(`exam-${exam?.id}-time`);
-    return savedTime ? parseInt(savedTime) : exam?.duration * 60;
-  });
-  
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [timeStarted, setTimeStarted] = useState<Date | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [examReport, setExamReport] = useState<ExamReport | null>(null);
+  const [isGrading, setIsGrading] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+
   useEffect(() => {
-    if (!exam) {
-      navigate('/study?tab=exam');
-      return;
-    }
-
-    // Save initial time if not already saved
-    if (!localStorage.getItem(`exam-${exam.id}-time`)) {
-      localStorage.setItem(`exam-${exam.id}-time`, String(exam.duration * 60));
-    }
-
-    const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        const newTime = prev <= 1 ? 0 : prev - 1;
-        localStorage.setItem(`exam-${exam.id}-time`, String(newTime));
-        
-        if (newTime === 0) {
-          clearInterval(timer);
-          handleSubmit();
-        }
-        return newTime;
-      });
-    }, 1000);
-
-    // Cleanup timer and storage on unmount
-    return () => {
-      clearInterval(timer);
-      if (timeLeft <= 0) {
-        localStorage.removeItem(`exam-${exam.id}-time`);
+    const loadExam = async () => {
+      try {
+        if (!examId) throw new Error('No exam ID provided');
+        const loadedExam = await examService.getExam(examId);
+        setExam(loadedExam);
+        setTimeStarted(new Date());
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load exam');
+      } finally {
+        setLoading(false);
       }
     };
-  }, [exam, navigate]);
 
-  const handleSubmit = () => {
-    if (!exam) {
-      console.error('No exam data available');
-      navigate('/study?tab=exam');
-      return;
-    }
+    loadExam();
+  }, [examId]);
 
-    const examData = { exam, answers };
-    console.log('Submitting exam with data:', examData);
-    
-    // Store in session storage as backup
-    sessionStorage.setItem('examData', JSON.stringify(examData));
-
-    // Navigate to results page
-    navigate('/exam/results', { 
-      state: examData,
-      replace: true // Replace current history entry to prevent back navigation
-    });
+  const handleAnswerChange = (questionId: string, answer: string) => {
+    setAnswers(prev => ({ ...prev, [questionId]: answer }));
   };
 
-  const formatTime = (seconds: number) => {
-    const hrs = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
+  const handleSubmit = async () => {
+    if (!exam || !user || !timeStarted) return;
 
-  const handleAnswerChange = (value: string) => {
-    setAnswers(prev => ({
-      ...prev,
-      [exam.questions[currentQuestion].id]: value
-    }));
-  };
+    setIsSubmitting(true);
+    try {
+      const timeTaken = Math.floor((new Date().getTime() - timeStarted.getTime()) / 1000);
+      const score = calculateScore(exam, answers);
+      const correctAnswers = exam.questions.reduce((acc, q) => {
+        acc[q.id] = q.correctAnswer;
+        return acc;
+      }, {} as Record<string, string>);
+      const feedback = generateFeedback(exam, answers);
 
-  const renderQuestion = (question: ExamQuestion) => {
-    switch (question.type) {
-      case 'multipleChoice':
-        return (
-          <div className="space-y-4">
-            {question.options?.map((option, index) => (
-              <label
-                key={index}
-                className="flex items-start space-x-3 p-3 rounded-lg hover:bg-secondary cursor-pointer"
-              >
-                <input
-                  type="radio"
-                  name={question.id}
-                  value={option}
-                  checked={answers[question.id] === option}
-                  onChange={(e) => handleAnswerChange(e.target.value)}
-                  className="mt-1"
-                />
-                <span>{option}</span>
-              </label>
-            ))}
-          </div>
-        );
+      await examAnalyticsService.saveExamResult(
+        user.id,
+        exam.id,
+        score,
+        answers,
+        correctAnswers,
+        timeTaken,
+        feedback
+      );
 
-      case 'shortAnswer':
-      case 'essay':
-      case 'problemSolving':
-        return (
-          <textarea
-            value={answers[question.id] || ''}
-            onChange={(e) => handleAnswerChange(e.target.value)}
-            className="w-full h-48 p-3 rounded-lg bg-secondary resize-none"
-            placeholder="Type your answer here..."
-          />
-        );
+      navigate(`/results/${exam.id}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to submit exam');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  if (!exam) return null;
+  const calculateScore = (exam: Exam, answers: Record<string, string>): number => {
+    const totalQuestions = exam.questions.length;
+    const correctAnswers = exam.questions.filter(q => answers[q.id] === q.correctAnswer).length;
+    return Math.round((correctAnswers / totalQuestions) * 100);
+  };
+
+  const generateFeedback = (exam: Exam, answers: Record<string, string>): Record<string, string> => {
+    return exam.questions.reduce((acc, q) => {
+      const isCorrect = answers[q.id] === q.correctAnswer;
+      acc[q.id] = isCorrect ? 'Correct!' : `Incorrect. The correct answer was: ${q.correctAnswer}`;
+      return acc;
+    }, {} as Record<string, string>);
+  };
+
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
+  if (!exam) return <div>No exam found</div>;
+
+  const currentQuestion = exam.questions[currentQuestionIndex];
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Timer */}
-      <div className="fixed top-4 right-4 bg-paper dark:bg-paper-dark shadow-lg rounded-lg p-4">
-        <div className="text-2xl font-mono">{formatTime(timeLeft)}</div>
+    <div className="p-4">
+      <h1 className="text-2xl font-bold mb-4">{exam.title}</h1>
+      <p className="mb-6">{exam.description}</p>
+
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold mb-2">Question {currentQuestionIndex + 1} of {exam.questions.length}</h2>
+        <p className="mb-4">{currentQuestion.text}</p>
+
+        <div className="space-y-2">
+          {currentQuestion.options.map((option, index) => (
+            <label key={index} className="flex items-center space-x-2">
+              <input
+                type="radio"
+                name={`question-${currentQuestion.id}`}
+                value={option}
+                checked={answers[currentQuestion.id] === option}
+                onChange={() => handleAnswerChange(currentQuestion.id, option)}
+                className="form-radio"
+              />
+              <span>{option}</span>
+            </label>
+          ))}
+        </div>
       </div>
 
-      <div className="max-w-3xl mx-auto">
-        <Card className="p-6">
-          <div className="space-y-6">
-            {/* Question number and type */}
-            <div className="flex justify-between items-center">
-              <div>
-                <h2 className="text-2xl font-medium">
-                  Question {currentQuestion + 1} of {exam.questions.length}
-                </h2>
-                <p className="text-text dark:text-white opacity-70 capitalize">
-                  {exam.questions[currentQuestion].type}
-                </p>
-              </div>
-              <div className="text-accent font-medium">
-                {exam.questions[currentQuestion].points} points
-              </div>
-            </div>
+      <div className="flex justify-between">
+        <button
+          onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))}
+          disabled={currentQuestionIndex === 0}
+          className="px-4 py-2 bg-gray-200 rounded disabled:opacity-50"
+        >
+          Previous
+        </button>
 
-            {/* Question text */}
-            <div className="text-lg">
-              {exam.questions[currentQuestion].question}
-            </div>
-
-            {/* Answer input */}
-            <div className="mt-6">
-              {renderQuestion(exam.questions[currentQuestion])}
-            </div>
-
-            {/* Navigation */}
-            <div className="flex justify-between items-center pt-6">
-              <Button
-                variant="outline"
-                onClick={() => setCurrentQuestion(prev => prev - 1)}
-                disabled={currentQuestion === 0}
-              >
-                <ArrowLeft className="mr-2" size={20} />
-                Previous
-              </Button>
-
-              {currentQuestion === exam.questions.length - 1 ? (
-                <Button
-                  variant="primary"
-                  onClick={handleSubmit}
-                >
-                  Submit Exam
-                </Button>
-              ) : (
-                <Button
-                  variant="outline"
-                  onClick={() => setCurrentQuestion(prev => prev + 1)}
-                >
-                  Next
-                  <ArrowRight className="ml-2" size={20} />
-                </Button>
-              )}
-            </div>
-          </div>
-        </Card>
+        {currentQuestionIndex === exam.questions.length - 1 ? (
+          <button
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="px-4 py-2 bg-blue-500 text-white rounded disabled:opacity-50"
+          >
+            {isSubmitting ? 'Submitting...' : 'Submit Exam'}
+          </button>
+        ) : (
+          <button
+            onClick={() => setCurrentQuestionIndex(prev => Math.min(exam.questions.length - 1, prev + 1))}
+            className="px-4 py-2 bg-blue-500 text-white rounded"
+          >
+            Next
+          </button>
+        )}
       </div>
     </div>
   );

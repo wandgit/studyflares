@@ -97,6 +97,75 @@ export class StudyMaterialsService extends DatabaseService {
   }
 
   /**
+   * Save study material from library to Supabase
+   */
+  async saveMaterialFromLibrary(
+    userId: string,
+    material: {
+      fileName: string;
+      studyGuide: string;
+      flashcards: Array<{ question: string; answer: string }>;
+      quiz: Array<any>;
+      conceptMap: any;
+      exam?: any;
+    }
+  ): Promise<DBStudyMaterial> {
+    console.log('Saving material to library for user:', userId);
+    try {
+      // First check if this material already exists
+      const { data: existingMaterial } = await this.supabase
+        .from('study_materials')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('title', material.fileName)
+        .maybeSingle();
+
+      if (existingMaterial) {
+        console.log('Material already exists in Supabase');
+        return existingMaterial as DBStudyMaterial;
+      }
+
+      const insertData = {
+        user_id: userId,
+        title: material.fileName,
+        description: 'Generated study materials',
+        type: 'study_guide' as MaterialType,
+        content: {
+          studyGuide: material.studyGuide,
+          flashcards: material.flashcards,
+          quiz: material.quiz,
+          conceptMap: material.conceptMap,
+          exam: material.exam
+        },
+        metadata: {
+          source: 'library',
+          created_at: new Date().toISOString(),
+          lastModified: new Date().toISOString()
+        }
+      };
+
+      console.log('Inserting data:', insertData);
+
+      const { data, error } = await this.supabase
+        .from('study_materials')
+        .insert(insertData)
+        .select('*')
+        .single();
+
+      if (error) {
+        console.error('Error saving to Supabase:', error);
+        throw this.handleError(error);
+      }
+
+      console.log('Successfully saved to Supabase:', data);
+      return data as DBStudyMaterial;
+    } catch (error) {
+      console.error('Error in saveMaterialFromLibrary:', error);
+      throw this.handleError(error);
+    }
+  }
+
+  /**
    * Get public study materials
    */
   async getPublicMaterials(type?: MaterialType): Promise<DBStudyMaterial[]> {

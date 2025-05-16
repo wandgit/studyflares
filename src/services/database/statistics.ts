@@ -2,13 +2,65 @@ import { DatabaseService } from './base';
 import { DBUserStatistics } from '../../types/database.types';
 
 export class StatisticsService extends DatabaseService {
+  private initializeWeeklyStudyTime() {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    return days.map(day => ({ day, minutes: 0 }));
+  }
+
+  private async updateWeeklyStudyTime(userId: string, minutes: number) {
+    const today = new Date();
+    const dayOfWeek = today.toLocaleDateString('en-US', { weekday: 'long' });
+
+    const { data: stats } = await this.supabase
+      .from('user_statistics')
+      .select('weekly_study_time')
+      .eq('user_id', userId)
+      .single();
+
+    if (!stats) return;
+
+    const weeklyTime = stats.weekly_study_time || this.initializeWeeklyStudyTime();
+    const dayIndex = weeklyTime.findIndex((d: { day: string }) => d.day === dayOfWeek);
+    if (dayIndex !== -1) {
+      weeklyTime[dayIndex].minutes += minutes;
+    }
+
+    await this.supabase
+      .from('user_statistics')
+      .update({ weekly_study_time: weeklyTime })
+      .eq('user_id', userId);
+  }
+
+  private async updateSubjectPerformance(userId: string, subject: string, score: number) {
+    const { data: stats } = await this.supabase
+      .from('user_statistics')
+      .select('subject_performance')
+      .eq('user_id', userId)
+      .single();
+
+    if (!stats) return;
+
+    const performance = stats.subject_performance || [];
+    const subjectIndex = performance.findIndex((p: { subject: string }) => p.subject === subject);
+    
+    if (subjectIndex !== -1) {
+      performance[subjectIndex].score = (performance[subjectIndex].score + score) / 2;
+    } else {
+      performance.push({ subject, score });
+    }
+
+    await this.supabase
+      .from('user_statistics')
+      .update({ subject_performance: performance })
+      .eq('user_id', userId);
+  }
   /**
    * Get or create user statistics
    */
   async getOrCreateStatistics(userId: string): Promise<DBUserStatistics> {
     try {
       // First try to get existing statistics
-      const { data: existingStats, error: getError } = await this.supabase
+      const { data: existingStats, error } = await this.supabase
         .from('user_statistics')
         .select('*')
         .eq('user_id', userId)
@@ -19,7 +71,7 @@ export class StatisticsService extends DatabaseService {
       }
 
       // If not found, create new statistics
-      if (getError && getError.code === 'PGRST116') {
+      if (error && error.code === 'PGRST116') {
         const { data: newStats, error: insertError } = await this.supabase
           .from('user_statistics')
           .insert({
@@ -29,6 +81,8 @@ export class StatisticsService extends DatabaseService {
             exams_passed: 0,
             materials_created: 0,
             last_activity: new Date().toISOString(),
+            weekly_study_time: this.initializeWeeklyStudyTime(),
+            subject_performance: [],
             metadata: {}
           })
           .select('*')
@@ -41,8 +95,8 @@ export class StatisticsService extends DatabaseService {
         return newStats as DBUserStatistics;
       }
 
-      if (getError) {
-        return this.handleError(getError);
+      if (error) {
+        return this.handleError(error);
       }
 
       return existingStats as DBUserStatistics;
@@ -54,10 +108,8 @@ export class StatisticsService extends DatabaseService {
   /**
    * Update study time
    */
-  async updateStudyTime(
-    userId: string,
-    additionalMinutes: number
-  ): Promise<DBUserStatistics> {
+  async updateStudyTime(userId: string, additionalMinutes: number): Promise<DBUserStatistics> {
+    await this.updateWeeklyStudyTime(userId, additionalMinutes);
     try {
       // First get or create the statistics
       const stats = await this.getOrCreateStatistics(userId);
@@ -86,10 +138,10 @@ export class StatisticsService extends DatabaseService {
   /**
    * Update exam statistics
    */
-  async updateExamStats(
-    userId: string,
-    passed: boolean
-  ): Promise<DBUserStatistics> {
+  async updateExamStats(userId: string, passed: boolean, subject?: string, score?: number): Promise<DBUserStatistics> {
+    if (subject && score !== undefined) {
+      await this.updateSubjectPerformance(userId, subject, score);
+    }
     try {
       // First get or create the statistics
       const stats = await this.getOrCreateStatistics(userId);
